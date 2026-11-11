@@ -4,7 +4,7 @@ lazyfill is a Chrome extension that fills in job applications from a profile you
 fill or submit, and can draft answers to open-ended questions with an AI service you connect. A small companion web
 page shows the same application tracker from any browser.
 
-![The panel detecting a job application and filling it](docs/screenshots/2-autofills-in-one-click.png)
+https://github.com/user-attachments/assets/d09eaaa6-1520-4cf9-91a2-63c58d4114ae
 
 ## Contents
 
