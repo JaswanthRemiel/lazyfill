@@ -4,6 +4,7 @@ import type { AiSettings, Application, FirebaseConfig, PendingWrite, Profile, Se
 interface Schema {
   lf_session: Session;
   lf_firebase_config: FirebaseConfig;
+  lf_tracker_url: string;
   lf_profile_cache: Profile[];
   lf_active_profile_id: string;
   lf_pending_writes: PendingWrite[];

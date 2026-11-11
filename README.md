@@ -20,7 +20,7 @@ page shows the same application tracker from any browser.
 10. [Known limits](#known-limits)
 11. [Disclaimer and license](#disclaimer-and-license)
 
-More detail on internals is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+The detailed setup guide is [docs/SETUP.md](docs/SETUP.md). More detail on internals is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Features
 
@@ -77,106 +77,43 @@ SDK on the web page), Vitest with jsdom.
 - A Chromium based browser, version 114 or newer (Chrome, Edge, Brave).
 - A Firebase project (the free Spark plan is enough). See [Setup](#setup).
 - Optional: a Gemini or OpenAI API key for resume import and answer generation.
-- Optional: a GitHub repository with Pages enabled, to host the web tracker.
+- Optional: a GitHub repository of your own with Pages enabled, to host your own web tracker. See [docs/SETUP.md](docs/SETUP.md).
 
 ## Setup
 
-lazyfill needs a backend for accounts and storage. The repository does not contain a Firebase project: you create your
-own and paste its web app config into the extension's Settings (section 3). Nothing is baked into the code, so the same
-build works for anyone. Until a config is pasted the extension opens, but nobody can sign in.
+lazyfill is software you run yourself. There is no lazyfill server: you create your own Firebase project for accounts
+and storage and paste its config into the extension, so nothing about your project is stored in the code.
 
-### 1. Install and build
+**The full, step-by-step guide, with a check after every step and fixes for common problems, is in
+[docs/SETUP.md](docs/SETUP.md).** The short version:
 
-```sh
-git clone https://github.com/JaswanthRemiel/lazyfill.git
-cd lazyfill
-npm install
-npm run build
-```
+1. **Build.** `git clone https://github.com/JaswanthRemiel/lazyfill.git`, then `cd lazyfill`, `npm install` and
+   `npm run build`. The extension is written to `dist/`.
+2. **Load it.** Open `chrome://extensions`, turn on **Developer mode**, choose **Load unpacked** and select `dist`.
+3. **Create a Firebase project** in the [Firebase console](https://console.firebase.google.com): add a **Web app** and
+   copy its config block, enable **Authentication, Email/Password**, create a **Firestore** database in production mode,
+   and publish the rules from [`firestore.rules`](firestore.rules).
+4. **Connect.** In the extension open the dashboard, go to **Settings**, paste the config into **Firebase project** and
+   press **Save and connect**. Then create your account in the **Account** card and verify your email.
+5. **Optional.** Add a Gemini or OpenAI key under **AI key** for resume import and answer drafting. Host your own
+   web tracker from your fork of the repository (see the guide, section 10).
 
-The build writes the extension to `dist/`. It compiles the pages and service worker first and the content script
-second, because content scripts cannot be ES modules.
+Detailed walkthroughs in the guide:
 
-### 2. Load the extension
-
-1. Open `chrome://extensions`.
-2. Turn on **Developer mode**.
-3. Choose **Load unpacked** and select the `dist` folder.
-4. Pin the lazyfill icon to the toolbar.
-
-After changing code, run `npm run build` again and press the reload icon on the extension card.
-
-### 3. Create your Firebase project
-
-1. In the [Firebase console](https://console.firebase.google.com), create a project.
-2. Add a **Web app** (the code icon on the project overview) and copy the config object it shows.
-3. **Authentication, Sign-in method:** enable **Email/Password**. The "Email link" option is not used.
-4. **Authentication, Settings, Authorized domains:** add the host that serves the web tracker, for example
-   `your-name.github.io`. `localhost` is already there.
-5. **Authentication, Templates:** set the project's public name and a reply-to address so verification and password
-   reset emails look right.
-6. **Firestore Database:** create a database in production mode and choose a region.
-7. **Firestore, Rules:** paste the contents of [`firestore.rules`](firestore.rules) and publish. The rules let a user
-   read and write only `users/<their uid>/...`, only in the collections lazyfill uses, and only after the email
-   address is verified.
-8. Load the extension (section 2), open the lazyfill dashboard, go to **Settings**, and paste the config block from
-   step 2 into the **Firebase project** box. Press **Save and connect**. lazyfill checks the key with Firebase and
-   tells you if something is off, for example that Authentication is not enabled yet. After that, create your account
-   in the **Account** box on the same page. Switching to a different project later signs you out and clears the data
-   stored in this browser; nothing is deleted from either project.
-   The web tracker asks for the same config the first time you open it and keeps it in that browser. If you would
-   rather bake a config into a build, copy [`.env.example`](.env.example) to `.env.local` and fill it in; a pasted
-   config always wins over a baked one.
-   Set `SITE_URL` in [`src/shared/config.ts`](src/shared/config.ts) to the address where you will publish the web
-   tracker, with a trailing slash, for example `https://your-name.github.io/lazyfill/`. It is only used for the
-   privacy and terms links.
-9. Update `homepage_url` in `public/manifest.json` and `homepage` in `package.json` to the same address, then rebuild
-   and reload the extension.
-
-The Firebase web config is an identifier, not a secret. Access control comes from the Firestore rules, so make sure
-step 7 is done. In the Google Cloud console you can also restrict the API key to the Identity Toolkit, Token Service
-and Cloud Firestore APIs.
-
-### 4. Publish the web tracker (optional)
-
-The workflow in [`.github/workflows/pages.yml`](.github/workflows/pages.yml) builds `web/` and deploys it to GitHub
-Pages on every push to `main`.
-
-1. Push the repository to GitHub.
-2. Optional: to make your own copy of the site open already connected, open **Settings, Secrets and variables, Actions,
-   Variables** and add one repository variable per line of [`.env.example`](.env.example). Use variables, not secrets:
-   the values are public once the site is built. Without them the site asks each visitor for a config, which is what
-   you want for a public fork.
-3. Open **Settings, Pages** and set **Source** to **GitHub Actions**.
-4. Push a change, or run the workflow manually. When it finishes, the site is at the address in `SITE_URL`.
-
-The site also serves a demo application form at `/demo.html`, which is a convenient page for trying autofill, and the
-privacy policy and terms at `/privacy.html` and `/terms.html`. Review those two pages before running lazyfill for other
-people, because they name the publisher and describe how data is handled.
-
-To run the site locally instead, use `npm run build:web` and serve the `dist-web` directory with any static server.
-
-### 5. Create your account
-
-1. Click the lazyfill toolbar icon on any page. The panel opens with a sign-in screen.
-2. Choose **Create an account**, then enter an email and a password of at least 8 characters.
-3. Open the verification email and click its link.
-4. Back in lazyfill, press **I've verified**. Nothing can be saved until the address is verified.
-
-The same email and password work on the web tracker. **Forgot password** sends a reset email.
-
-### 6. Optional: connect an AI provider
-
-Open the dashboard (the grid icon in the panel), go to **Settings**, add a Gemini or OpenAI key under **AI key**, and
-press **Save and test key**. The key is stored only in this browser. See [Data and privacy](#data-and-privacy) for what
-is sent to the provider.
-
-| Setting | Meaning |
+| Topic | Section |
 |---|---|
-| Provider | Google Gemini or OpenAI. |
-| API key | Your own key. It leaves the browser only in requests to the provider. |
-| Model | Used for answer generation. Defaults: `gemini-2.5-flash`, `gpt-4o-mini`. |
-| Resume import model | Used to read resumes. Defaults: `gemini-2.5-pro`, `gpt-4o`. If your key cannot use the default, the everyday model is used and the review screen says so. A model you type here is used as is, with no fallback. |
+| Requirements and what you are setting up | [1](docs/SETUP.md#1-what-you-are-setting-up) and [2](docs/SETUP.md#2-before-you-start) |
+| Building and loading the extension | [3](docs/SETUP.md#3-get-the-code-and-build-it) and [4](docs/SETUP.md#4-load-the-extension-in-your-browser) |
+| Firebase project, rules and API key | [5](docs/SETUP.md#5-create-your-firebase-project) |
+| Connecting the extension and creating your account | [6](docs/SETUP.md#6-connect-the-extension-to-your-project) and [7](docs/SETUP.md#7-create-your-account) |
+| AI provider | [8](docs/SETUP.md#8-optional-connect-an-ai-provider) |
+| First autofill and the demo form | [9](docs/SETUP.md#9-your-first-autofill) |
+| Your own web tracker on GitHub Pages | [10](docs/SETUP.md#10-optional-host-your-own-web-tracker) |
+| Updating, backing up, removing everything | [11](docs/SETUP.md#11-everyday-maintenance) |
+| Problems and fixes | [12](docs/SETUP.md#12-setup-problems-and-fixes) |
+
+The Firebase web config is an identifier, not a secret: access control comes from the Firestore rules, so do not skip
+publishing them. Restrict the API key by API (never by website) as described in the guide.
 
 ## Using lazyfill
 
@@ -290,7 +227,7 @@ Rejected, Ghosted and Withdrawn.
 In the dashboard under **Applications** you can search, filter by status, edit notes, add an application by hand,
 **Export CSV**, **Export JSON** and **Import JSON**.
 
-The web tracker shows the same list. Sign in at your `SITE_URL` with the same email and password. Changes made in
+The web tracker shows the same list. Open your own tracker (Settings, Web tracker) and sign in with the same email and password. Changes made in
 either place appear in the other.
 
 ### Settings and account
@@ -311,8 +248,8 @@ either place appear in the other.
 | Name | Purpose |
 |---|---|
 | Firebase config | Not a constant. Pasted in Settings and stored in the browser (`lf_firebase_config` in the extension, `localStorage` on the web tracker), or optionally baked in at build time from the `VITE_FIREBASE_*` variables in `.env.local`. |
-| `SITE_URL` | Where the web tracker is published. The Settings page links to it. |
-| `PRIVACY_URL`, `TERMS_URL` | Derived from `SITE_URL`. Linked from the dashboard and panel. |
+| Tracker address | Not a constant either. Pasted in Settings, Web tracker and stored in the browser (`lf_tracker_url`). The privacy and terms links in the footers point to that site, or to this README until one is set. |
+| `REPO_URL` | The project's home on GitHub, in `src/shared/tracker.ts`. Used for the fallback legal links. |
 | `NOT_AFFILIATED` | The disclaimer shown in footers. |
 
 ### Firestore data model
@@ -357,7 +294,7 @@ nothing anywhere.
 - There are no analytics, trackers or advertisements.
 - You can export your data from the dashboard and delete all of it from **Settings, Delete my account**.
 
-The full text is in [web/public/privacy.html](web/public/privacy.html) and [web/public/terms.html](web/public/terms.html).
+The full text is in [web/public/privacy.html](web/public/privacy.html) and [web/public/terms.html](web/public/terms.html). They are templates for the software as shipped: lazyfill has no central service, so whoever runs a copy is the one responsible for the data in it.
 
 ## Development
 
@@ -430,7 +367,7 @@ site handler, and adding a message between the pages and the service worker.
 | Nothing happens on a site | Use **Report** in the panel with a description. Site handlers depend on the site's current markup. |
 | `Missing or insufficient permissions` | The Firestore rules are not published, or the account's email is not verified. Publish `firestore.rules` and verify the email. |
 | `Email and password sign-in is not enabled` | Enable Email/Password under Authentication, Sign-in method. |
-| The verification or reset email does not arrive | Check spam. Make sure the project's authorized domains include the host in `SITE_URL`. |
+| The verification or reset email does not arrive | Check spam. Make sure the project's authorized domains include the host of your web tracker. |
 | `API key not valid` or a quota error on import | Check the key and model in Settings. Free tier keys often cannot use the stronger import model, in which case lazyfill falls back to the everyday one. |
 | The right-click item is missing | Select some text first, since the item only appears on a selection. Reload the extension after an update. |
 | Import with AI returns very little | Scanned or image-only resumes depend on the model reading the image, and the text check cannot help. Try a text PDF or a clearer image. |

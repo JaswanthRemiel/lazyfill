@@ -277,6 +277,13 @@ selected text, widening one ancestor at a time and preferring a textarea.
 the Firebase SDK against `users/<uid>/applications`. The static files in `web/public` (demo form, privacy policy,
 terms) are copied to the site root.
 
+The tracker is self-hosted: each person publishes their own copy and it only ever talks to their own Firebase
+project. The site gets its config from `localStorage` (or a build-time default), and the extension can hand it over in
+a link, `<site>/#setup=<base64url json>` (`trackerLink` and `configFromHash` in `src/shared/tracker.ts`). The site
+reads the fragment before the Firebase SDK starts, stores the config, and clears the fragment from the address bar.
+The extension keeps the person's site address in `lf_tracker_url` and uses it for the Open web tracker button and for
+the footer links to the privacy policy and terms.
+
 Because the extension writes with REST and the site with the SDK, both use plain Firestore value types and the same
 field names, so documents written by one are read by the other.
 

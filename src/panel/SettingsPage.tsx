@@ -1,7 +1,7 @@
 import { FastForward, LayoutGrid, Moon, ShieldCheck, SlidersHorizontal } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PRIVACY_URL } from '../shared/config';
+import { useLegalLinks } from '../ui/Legal';
 import { useTheme } from '../ui/theme';
 import { openDashboard } from './Header';
 import { PageTitle, Row, Toggle } from './ui';
@@ -11,6 +11,7 @@ const SKIP_KEY = 'lf_skip_result_screens';
 export function SettingsPage() {
   const nav = useNavigate();
   const { isDark, setTheme } = useTheme();
+  const { privacy } = useLegalLinks();
   const [skip, setSkip] = useState(false);
 
   useEffect(() => { chrome.storage.sync.get(SKIP_KEY).then((r) => setSkip(!!r[SKIP_KEY])); }, []);
@@ -24,7 +25,7 @@ export function SettingsPage() {
         <Row icon={<FastForward />} label="Skip result animations"><Toggle checked={skip} onChange={toggleSkip} label="Skip result animations" /></Row>
         <Row icon={<LayoutGrid />} label="Application tracker" onClick={() => openDashboard('applications')} />
         <Row icon={<SlidersHorizontal />} label="Account & AI setup" onClick={() => openDashboard('settings')} />
-        <Row icon={<ShieldCheck />} label="Privacy policy" onClick={() => chrome.tabs.create({ url: PRIVACY_URL })} />
+        <Row icon={<ShieldCheck />} label="Privacy policy" onClick={() => chrome.tabs.create({ url: privacy })} />
       </div>
       <p className="mt-auto text-center text-[10px] leading-4 text-muted-foreground">Independent project, not affiliated with any employer, job board or AI provider.<br />lazyfill v{chrome.runtime.getManifest().version}</p>
     </section>

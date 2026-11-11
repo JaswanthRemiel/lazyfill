@@ -100,3 +100,17 @@ describe('build-time config', () => {
     vi.unstubAllEnvs();
   });
 });
+
+describe('tracker link', () => {
+  it('is null until a tracker address is saved, then carries the Firebase config', async () => {
+    fetchMock.mockResolvedValue(reply('INVALID_ID_TOKEN'));
+    const { getTrackerLink, saveFirebaseConfig } = await import('./config');
+    const { configFromHash } = await import('../../shared/tracker');
+    expect(await getTrackerLink()).toBeNull();
+    local.lf_tracker_url = 'https://me.github.io/lazyfill/';
+    expect(await getTrackerLink()).toBe('https://me.github.io/lazyfill/'); // no project yet: plain address
+    await saveFirebaseConfig(A);
+    const link = (await getTrackerLink())!;
+    expect(configFromHash(link.slice(link.indexOf('#')))).toEqual({ apiKey: 'key-a', projectId: 'project-a' });
+  });
+});

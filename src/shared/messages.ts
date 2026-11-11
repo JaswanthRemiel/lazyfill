@@ -19,6 +19,7 @@ export type Message =
   | { action: 'getFirebaseSetup' }
   | { action: 'saveFirebaseConfig'; text: string }
   | { action: 'clearFirebaseConfig' }
+  | { action: 'getTrackerLink' }
   | { action: 'listProfiles' }
   | { action: 'saveProfile'; profile: Profile }
   | { action: 'deleteProfile'; id: string }

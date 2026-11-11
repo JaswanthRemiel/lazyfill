@@ -6,6 +6,7 @@ import {
 import { getFirestore, initializeFirestore } from 'firebase/firestore';
 import { buildTimeFirebaseConfig } from '../../src/shared/config';
 import { parseFirebaseConfig, type FirebaseSetupStatus } from '../../src/shared/firebaseConfig';
+import { configFromHash } from '../../src/shared/tracker';
 import type { FirebaseConfig } from '../../src/shared/types';
 
 const CONFIG_KEY = 'lf_firebase_config';
@@ -19,7 +20,16 @@ function pasted(): FirebaseConfig | null {
   }
 }
 
-const chosen = pasted();
+/** Opened from the extension's Settings: take the config from the link, keep it, and clear it from the address bar. */
+function adoptFromLink(): FirebaseConfig | null {
+  const cfg = configFromHash(location.hash);
+  if (!cfg) return null;
+  try { localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg)); } catch { /* private mode: it still works for this visit */ }
+  history.replaceState(null, '', location.pathname + location.search);
+  return cfg;
+}
+
+const chosen = adoptFromLink() ?? pasted();
 const active = chosen ?? buildTimeFirebaseConfig();
 
 /** Whether this page knows which Firebase project to talk to. When it does not, App shows the setup screen first. */

@@ -1,6 +1,7 @@
 import { buildTimeFirebaseConfig } from '../../shared/config';
 import { ConfigParseError, parseFirebaseConfig, type FirebaseSetupStatus } from '../../shared/firebaseConfig';
 import { getItem, removeItem, setItem } from '../../shared/storage';
+import { trackerLink } from '../../shared/tracker';
 import type { FirebaseConfig } from '../../shared/types';
 
 export class NotConfiguredError extends Error {
@@ -83,4 +84,15 @@ export async function clearFirebaseConfig(): Promise<void> {
   await removeItem('lf_firebase_config');
   const after = await firebaseStatus();
   if (before.projectId !== after.projectId) await forgetProjectData();
+}
+
+/** The address of the person's own web tracker, with their Firebase config attached so it opens already connected. */
+export async function getTrackerLink(): Promise<string | null> {
+  const url = await getItem('lf_tracker_url');
+  if (!url) return null;
+  try {
+    return trackerLink(url, await getFirebaseConfig());
+  } catch {
+    return url;
+  }
 }

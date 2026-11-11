@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { DEFAULT_PROMPT_TEMPLATE } from '../../shared/answers';
 import { send } from '../../shared/messages';
-import { SITE_URL, siteConfigured } from '../../shared/config';
+import { normalizeTrackerUrl, REPO_URL } from '../../shared/tracker';
 import { getItem, setItem } from '../../shared/storage';
 import type { AiSettings } from '../../shared/types';
 import type { SessionInfo } from '../../panel/useProfiles';
@@ -35,7 +35,6 @@ function AccountCard({ session, onChange }: { session: SessionInfo | null; onCha
         <div className="flex flex-wrap items-center gap-3">
           <p className="text-sm font-medium">Signed in as <span className="font-semibold">{session.email}</span></p>
           <button className={btnGhost} onClick={test} disabled={busy}>Test connection</button>
-          {siteConfigured() && <a className={btnGhost} href={SITE_URL} target="_blank" rel="noopener noreferrer">Open web tracker</a>}
           <button className={btnGhost} onClick={async () => { await send({ action: 'signOut' }); onChange(); }}>Sign out</button>
         </div>
       ) : a.step === 'verify' ? (
@@ -69,6 +68,71 @@ function AccountCard({ session, onChange }: { session: SessionInfo | null; onCha
   );
 }
 
+function TrackerCard() {
+  const [saved, setSaved] = useState('');
+  const [text, setText] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [note, setNote] = useState<Status>(null);
+  useEffect(() => { getItem('lf_tracker_url').then((u) => { setSaved(u ?? ''); setEditing(!u); }); }, []);
+
+  async function save() {
+    try {
+      const url = normalizeTrackerUrl(text);
+      await setItem('lf_tracker_url', url);
+      setSaved(url);
+      setText('');
+      setEditing(false);
+      setNote({ ok: true, text: 'Saved. Use “Open web tracker” and it connects to your Firebase project by itself.' });
+    } catch (e) {
+      setNote({ ok: false, text: e instanceof Error ? e.message : 'That address does not look right.' });
+    }
+  }
+  async function open() {
+    const r = await send<string | null>({ action: 'getTrackerLink' });
+    if (r.success && r.data) window.open(r.data, '_blank', 'noopener');
+  }
+  async function remove() {
+    await chrome.storage.local.remove('lf_tracker_url');
+    setSaved('');
+    setEditing(true);
+    setNote(null);
+  }
+
+  return (
+    <section className={`${card} grid gap-4`}>
+      <div>
+        <h2 className="text-lg font-semibold">3 · Web tracker <span className="text-xs font-semibold text-muted-foreground">(optional)</span></h2>
+        <p className="text-sm text-muted-foreground">
+          The same application list on any device, from a small website that you host yourself. It is not run by anyone else, and it talks only to your Firebase project.
+        </p>
+      </div>
+      {saved && !editing ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="break-all text-sm">Your tracker: <b className="font-medium">{saved}</b></p>
+          <button type="button" className={btnPrimary} onClick={open}>Open web tracker</button>
+          <button type="button" className={btnGhost} onClick={() => setEditing(true)}>Change</button>
+          <button type="button" className={btnGhost} onClick={remove}>Remove</button>
+        </div>
+      ) : (
+        <div className="grid gap-3">
+          <ol className="list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
+            <li>Fork the lazyfill repository on GitHub, or push your clone to a repository of your own.</li>
+            <li>In that repository open <b className="font-medium text-foreground">Settings, Pages</b> and set the source to <b className="font-medium text-foreground">GitHub Actions</b>, then run the <b className="font-medium text-foreground">Publish tracker</b> workflow from the Actions tab.</li>
+            <li>In the Firebase console, add the site&rsquo;s host (for example <code>your-name.github.io</code>) under <b className="font-medium text-foreground">Authentication, Settings, Authorized domains</b>.</li>
+            <li>Paste the site&rsquo;s address below. The <a className="font-medium text-foreground underline underline-offset-2" href={`${REPO_URL}/blob/main/docs/SETUP.md#10-optional-host-your-own-web-tracker`} target="_blank" rel="noreferrer">setup guide</a> has the details.</li>
+          </ol>
+          <div className="flex gap-2">
+            <input className={`${inputCls} flex-1`} aria-label="Web tracker address" placeholder="https://your-name.github.io/lazyfill/" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && save()} />
+            <button type="button" className={btnPrimary} disabled={!text.trim()} onClick={save}>Save</button>
+            {saved && <button type="button" className={btnGhost} onClick={() => { setEditing(false); setText(''); setNote(null); }}>Cancel</button>}
+          </div>
+        </div>
+      )}
+      {note && <Notice ok={note.ok}>{note.text}</Notice>}
+    </section>
+  );
+}
+
 function PromptCard() {
   const [text, setText] = useState('');
   const [loaded, setLoaded] = useState(false);
@@ -84,7 +148,7 @@ function PromptCard() {
   return (
     <section className={`${card} grid gap-4`}>
       <div>
-        <h2 className="text-lg font-semibold">4 · “Generate with lazyfill” prompt</h2>
+        <h2 className="text-lg font-semibold">5 · “Generate with lazyfill” prompt</h2>
         <p className="text-sm font-medium text-muted-foreground">On an application, select a question, right-click and choose <b>Generate with lazyfill</b>. This is the prompt it sends. Placeholders: {'{{profile}}'}, {'{{jobTitle}}'}, {'{{company}}'}, {'{{description}}'}, {'{{question}}'}, {'{{hint}}'} (your answer-bank notes).</p>
       </div>
       <textarea rows={16} spellCheck={false} disabled={!loaded} className={`${inputCls} h-auto py-2 font-mono text-xs`} value={text} onChange={(e) => setText(e.target.value)} aria-label="Prompt template" />
@@ -116,7 +180,7 @@ function AiCard() {
   return (
     <section className={`${card} grid gap-4`}>
       <div>
-        <h2 className="text-lg font-semibold">3 · AI key <span className="text-xs font-semibold text-muted-foreground">(optional)</span></h2>
+        <h2 className="text-lg font-semibold">4 · AI key <span className="text-xs font-semibold text-muted-foreground">(optional)</span></h2>
         <p className="text-sm font-medium text-muted-foreground">Used to import profiles from your resume and to write answers with “Generate with lazyfill”. Stored only in this browser. When you use an AI feature, the resume pages, question text, profile summary and job details it needs are sent to the provider you choose, under that provider’s own terms. Free-tier plans (Google’s in particular) may use what you send to improve their products; paid plans generally do not. Check your provider’s policy.</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
@@ -211,6 +275,7 @@ export function SettingsPage({ session, onSessionChange }: { session: SessionInf
 
       {fb && <FirebaseSetup status={fb} onSave={saveFirebase} onClear={clearFirebase} />}
       {fb?.configured && <AccountCard session={session} onChange={onSessionChange} />}
+      {fb?.configured && <TrackerCard />}
       <AiCard />
       <PromptCard />
       {session && <DeleteAccount onDone={onSessionChange} />}

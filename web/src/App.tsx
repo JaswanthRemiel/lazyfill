@@ -124,6 +124,11 @@ export function App() {
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-6 py-8">
+        {!webStatus.configured && (
+          <p className="mx-auto mb-4 max-w-xl text-center text-sm text-muted-foreground">
+            This is your own copy of the tracker. Open it from lazyfill Settings, Web tracker, and it connects by itself, or paste your Firebase config below.
+          </p>
+        )}
         {!webStatus.configured || changing
           ? <FirebaseSetup className="mx-auto max-w-xl" status={webStatus} startEditing={changing} onCancel={() => setChanging(false)} onSave={saveWebConfig} onClear={webStatus.source === 'pasted' ? clearWebConfig : undefined} />
           : user === undefined ? <p className="text-center text-sm text-muted-foreground">Loading…</p>
