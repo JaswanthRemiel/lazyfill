@@ -55,6 +55,9 @@ const detect = params.has('nosite')
       if (m.action === 'signUp') return { success: true, data: 'unverified' };
       if (m.action === 'resendVerification' || m.action === 'sendPasswordReset') return { success: true };
       if (m.action === 'getSession') return { success: true, data: params.has('loggedout') ? null : { uid: 'u', email: 'a@b.c' } };
+      if (m.action === 'getFirebaseSetup') return { success: true, data: params.has('nofirebase') ? { configured: false, projectId: '', source: 'none' } : { configured: true, projectId: 'demo-project', source: 'pasted' } };
+      if (m.action === 'saveFirebaseConfig') return { success: true, data: { projectId: 'demo-project' } };
+      if (m.action === 'clearFirebaseConfig') return { success: true };
       if (m.action === 'listProfiles') return { success: true, data: profiles };
       if (m.action === 'setActiveProfile') return { success: true };
       if (m.action === 'listLearned') return { success: true, data: { p1: { greenhouse: {

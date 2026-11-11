@@ -107,6 +107,8 @@ Other channels:
 Accounts use Firebase Authentication with email and password. The extension calls the REST API directly, so it needs
 no SDK.
 
+The project's `apiKey` and `projectId` are read from storage on every call (`getFirebaseConfig` in `background/firebase/config.ts`), so pasting a config in Settings takes effect without a rebuild.
+
 ```
 sign up   accounts:signUp  ->  accounts:sendOobCode (VERIFY_EMAIL)  ->  no session yet
 sign in   accounts:signInWithPassword  ->  accounts:lookup (emailVerified?)
@@ -131,6 +133,7 @@ Details worth knowing:
 | Key | Contents |
 |---|---|
 | `lf_session` | The signed-in session. |
+| `lf_firebase_config` | The Firebase web config pasted in Settings. Read by the service worker for every Firebase call. Changing the project wipes the session and project data. |
 | `lf_profile_cache` | All profiles, for offline autofill. |
 | `lf_active_profile_id` | The profile the panel uses. |
 | `lf_applications_cache` | The tracker list, for offline viewing. |
@@ -292,7 +295,7 @@ so sites cannot detect or embed other parts of the extension.
 
 - **Data isolation** is enforced by the Firestore rules, not by the client. A user can read and write only
   `users/<their uid>/<collection>`, only for the collections lazyfill uses, and only with a verified email.
-- **The Firebase web config** is read from `VITE_FIREBASE_*` build variables (`.env.local` locally, repository variables in CI) and is not committed. It is still an identifier, not a secret: it ships inside every built copy. Treat the rules as the security boundary and consider
+- **The Firebase web config** is not in the code. It is pasted by the user and stored in the browser (or, optionally, baked in from `VITE_FIREBASE_*` build variables, which are not committed). It is an identifier, not a secret. Treat the rules as the security boundary and consider
   restricting the API key to the three APIs in use.
 - **Secrets** (session, AI key) are readable only by extension pages and the service worker. Content scripts cannot
   read `chrome.storage.local` data they were not sent, and pages cannot read content script memory.

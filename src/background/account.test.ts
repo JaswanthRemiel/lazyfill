@@ -14,6 +14,7 @@ const area = (m: Record<string, unknown>) => ({
 beforeEach(() => {
   vi.resetModules();
   for (const k of Object.keys(local)) delete local[k];
+  local.lf_firebase_config = { apiKey: 'test-key', projectId: 'test-project' };
   local.lf_session = { uid: 'u1', email: 'a@b.c', idToken: 'old', refreshToken: 'r', expiresAt: Date.now() + 3_600_000 };
   local.lf_pending_writes = [{ id: 'x', op: 'set', path: 'users/u1/profiles/p', data: {}, createdAt: 0, attempts: 0 }];
   calls = [];

@@ -3,6 +3,7 @@ import { extractProfileFromResume, testAi } from './ai';
 import * as data from './data';
 import * as learned from './learned';
 import * as auth from './firebase/auth';
+import { clearFirebaseConfig, firebaseStatus, saveFirebaseConfig } from './firebase/config';
 import { getDoc, setDoc } from './firebase/firestore';
 import { deleteAccount } from './account';
 import * as tracker from './tracker';
@@ -86,6 +87,12 @@ async function handle(msg: Message, sender: chrome.runtime.MessageSender): Promi
       return deleteAccount(msg.password);
     case 'signOut':
       return auth.signOut();
+    case 'getFirebaseSetup':
+      return firebaseStatus();
+    case 'saveFirebaseConfig':
+      return saveFirebaseConfig(msg.text);
+    case 'clearFirebaseConfig':
+      return clearFirebaseConfig();
     case 'getSession':
       return auth.getSession().then((s) => (s ? { uid: s.uid, email: s.email } : null));
     case 'listProfiles':

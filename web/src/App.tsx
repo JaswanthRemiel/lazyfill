@@ -3,11 +3,13 @@ import { MailCheck, Moon, Sun } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ApplicationsPage } from '../../src/dashboard/pages/ApplicationsPage';
 import { btnGhost, btnPrimary, card, inputCls, Notice } from '../../src/dashboard/ui';
+import { FirebaseSetup } from '../../src/dashboard/FirebaseSetup';
 import { LegalFooter } from '../../src/ui/Legal';
 import { Segmented, Wordmark } from '../../src/ui/kit';
 import { MIN_PASSWORD, authMessage } from './errors';
 import {
-  refreshVerification, rememberEmail, rememberedEmail, resendVerification, sendReset, signInWithPassword, signOut, signUpWithPassword, watchUser,
+  clearWebConfig, refreshVerification, rememberEmail, rememberedEmail, resendVerification, saveWebConfig, sendReset, signInWithPassword, signOut,
+  signUpWithPassword, watchUser, webStatus,
 } from './firebase';
 import { useTheme } from './theme';
 
@@ -102,7 +104,8 @@ function VerifyEmail({ user }: { user: User }) {
 export function App() {
   const { isDark, setTheme } = useTheme();
   const [user, setUser] = useState<User | null | undefined>(undefined);
-  useEffect(() => watchUser(setUser), []);
+  useEffect(() => (webStatus.configured ? watchUser(setUser) : undefined), []);
+  const [changing, setChanging] = useState(false);
 
   return (
     <div className="min-h-screen bg-subtle font-sans text-foreground">
@@ -121,10 +124,17 @@ export function App() {
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-6 py-8">
-        {user === undefined ? <p className="text-center text-sm text-muted-foreground">Loading…</p>
+        {!webStatus.configured || changing
+          ? <FirebaseSetup className="mx-auto max-w-xl" status={webStatus} startEditing={changing} onCancel={() => setChanging(false)} onSave={saveWebConfig} onClear={webStatus.source === 'pasted' ? clearWebConfig : undefined} />
+          : user === undefined ? <p className="text-center text-sm text-muted-foreground">Loading…</p>
           : !user ? <PasswordForm />
           : !user.emailVerified ? <VerifyEmail user={user} />
           : <ApplicationsPage signedIn />}
+        {webStatus.configured && !changing && !user && (
+          <p className="mt-4 text-center text-xs text-muted-foreground">
+            Project: {webStatus.projectId} · <button type="button" className="underline underline-offset-2 hover:text-foreground" onClick={() => setChanging(true)}>use a different one</button>
+          </p>
+        )}
         <LegalFooter className="mt-12" />
       </main>
     </div>

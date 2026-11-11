@@ -1,6 +1,8 @@
-import { FIREBASE_CONFIG } from '../../shared/config';
+import { getFirebaseConfig } from './config';
 import { getItem, removeItem, setItem } from '../../shared/storage';
 import type { Session } from '../../shared/types';
+
+const apiKey = async () => encodeURIComponent((await getFirebaseConfig()).apiKey);
 
 const IDENTITY = 'https://identitytoolkit.googleapis.com/v1';
 const SECURE_TOKEN = 'https://securetoken.googleapis.com/v1/token';
@@ -51,19 +53,19 @@ async function post(url: string, body: BodyInit, headers: Record<string, string>
 
 async function identity(endpoint: 'signUp' | 'signInWithPassword', email: string, password: string) {
   return post(
-    `${IDENTITY}/accounts:${endpoint}?key=${FIREBASE_CONFIG.apiKey}`,
+    `${IDENTITY}/accounts:${endpoint}?key=${await apiKey()}`,
     JSON.stringify({ email: email.trim(), password, returnSecureToken: true }),
     { 'Content-Type': 'application/json' },
   );
 }
 
 async function isVerified(idToken: string): Promise<boolean> {
-  const j = await post(`${IDENTITY}/accounts:lookup?key=${FIREBASE_CONFIG.apiKey}`, JSON.stringify({ idToken }), { 'Content-Type': 'application/json' });
+  const j = await post(`${IDENTITY}/accounts:lookup?key=${await apiKey()}`, JSON.stringify({ idToken }), { 'Content-Type': 'application/json' });
   return !!j?.users?.[0]?.emailVerified;
 }
 
-const sendVerification = (idToken: string) =>
-  post(`${IDENTITY}/accounts:sendOobCode?key=${FIREBASE_CONFIG.apiKey}`, JSON.stringify({ requestType: 'VERIFY_EMAIL', idToken }), { 'Content-Type': 'application/json' });
+const sendVerification = async (idToken: string) =>
+  post(`${IDENTITY}/accounts:sendOobCode?key=${await apiKey()}`, JSON.stringify({ requestType: 'VERIFY_EMAIL', idToken }), { 'Content-Type': 'application/json' });
 
 export const MIN_PASSWORD = 8;
 
@@ -97,7 +99,7 @@ export async function resendVerification(email: string, password: string): Promi
 export async function sendPasswordReset(email: string): Promise<void> {
   if (!email.trim()) throw new AuthError('Enter your email address first.');
   try {
-    await post(`${IDENTITY}/accounts:sendOobCode?key=${FIREBASE_CONFIG.apiKey}`, JSON.stringify({ requestType: 'PASSWORD_RESET', email: email.trim() }), { 'Content-Type': 'application/json' });
+    await post(`${IDENTITY}/accounts:sendOobCode?key=${await apiKey()}`, JSON.stringify({ requestType: 'PASSWORD_RESET', email: email.trim() }), { 'Content-Type': 'application/json' });
   } catch (e) {
     if (e instanceof AuthError && e.code === 'EMAIL_NOT_FOUND') return;
     throw e;
@@ -120,7 +122,7 @@ export async function reauthenticate(password: string): Promise<Session> {
 
 /** Deletes the Firebase account itself. Call after the account's data is gone. */
 export async function deleteAuthAccount(idToken: string): Promise<void> {
-  await post(`${IDENTITY}/accounts:delete?key=${FIREBASE_CONFIG.apiKey}`, JSON.stringify({ idToken }), { 'Content-Type': 'application/json' });
+  await post(`${IDENTITY}/accounts:delete?key=${await apiKey()}`, JSON.stringify({ idToken }), { 'Content-Type': 'application/json' });
 }
 
 export async function signOut(): Promise<void> {
@@ -146,7 +148,7 @@ export async function getValidSession(): Promise<Session> {
 
 async function refresh(s: Session): Promise<Session> {
   const j = await post(
-    `${SECURE_TOKEN}?key=${FIREBASE_CONFIG.apiKey}`,
+    `${SECURE_TOKEN}?key=${await apiKey()}`,
     new URLSearchParams({ grant_type: 'refresh_token', refresh_token: s.refreshToken }),
     { 'Content-Type': 'application/x-www-form-urlencoded' },
   );

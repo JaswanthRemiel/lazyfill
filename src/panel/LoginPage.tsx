@@ -1,7 +1,10 @@
-import { MailCheck } from 'lucide-react';
+import { MailCheck, Settings2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { send } from '../shared/messages';
+import type { FirebaseSetupStatus } from '../shared/firebaseConfig';
 import { Button, Input, Logo } from '../ui/kit';
-import { ActionCluster } from './Header';
+import { ActionCluster, openDashboard } from './Header';
 import { MIN_PASSWORD, usePasswordAuth } from './useSignIn';
 
 export function LoginPage({ onSignedIn }: { onSignedIn: () => void }) {
@@ -9,6 +12,9 @@ export function LoginPage({ onSignedIn }: { onSignedIn: () => void }) {
   const a = usePasswordAuth(() => { onSignedIn(); nav('/'); });
   const busy = a.step === 'busy';
   const signIn = a.mode === 'signIn';
+  const [fb, setFb] = useState<FirebaseSetupStatus | null>(null);
+  useEffect(() => { send<FirebaseSetupStatus>({ action: 'getFirebaseSetup' }).then((r) => r.success && r.data && setFb(r.data)); }, []);
+  const needsProject = fb !== null && !fb.configured;
 
   return (
     <main className="relative size-full overflow-hidden rounded-[22px] border border-border bg-background font-sans text-foreground">
@@ -28,6 +34,15 @@ export function LoginPage({ onSignedIn }: { onSignedIn: () => void }) {
             </div>
             {a.note && <p role="status" className="text-xs text-muted-foreground">{a.note}</p>}
             {a.error && <p role="alert" className="text-xs text-destructive">{a.error}</p>}
+          </div>
+        ) : needsProject ? (
+          <div className="flex w-full animate-fade-in flex-col items-center gap-4 text-center">
+            <span className="flex size-14 items-center justify-center rounded-full bg-muted"><Settings2 className="size-7" strokeWidth={1.5} /></span>
+            <div>
+              <h1 className="text-[22px] font-semibold tracking-tight">Connect your Firebase project</h1>
+              <p className="mt-1.5 text-xs leading-5 text-muted-foreground">lazyfill keeps your account and data in a Firebase project that you own. Paste its web app config in Settings, then come back to sign in.</p>
+            </div>
+            <Button size="lg" className="w-full" onClick={() => openDashboard('settings')}>Open setup</Button>
           </div>
         ) : (
           <>

@@ -82,8 +82,8 @@ SDK on the web page), Vitest with jsdom.
 ## Setup
 
 lazyfill needs a backend for accounts and storage. The repository does not contain a Firebase project: you create your
-own and give the build its web app config through environment variables (section 3). Without it the project still
-builds, but nobody can sign in.
+own and paste its web app config into the extension's Settings (section 3). Nothing is baked into the code, so the same
+build works for anyone. Until a config is pasted the extension opens, but nobody can sign in.
 
 ### 1. Install and build
 
@@ -119,10 +119,17 @@ After changing code, run `npm run build` again and press the reload icon on the 
 7. **Firestore, Rules:** paste the contents of [`firestore.rules`](firestore.rules) and publish. The rules let a user
    read and write only `users/<their uid>/...`, only in the collections lazyfill uses, and only after the email
    address is verified.
-8. Copy [`.env.example`](.env.example) to `.env.local` and fill in the values from the web app config you copied in
-   step 2. `.env.local` is ignored by git, so your project's values stay on your machine. Then set `SITE_URL` in
-   [`src/shared/config.ts`](src/shared/config.ts) to the address where you will publish the web tracker, with a trailing
-   slash, for example `https://your-name.github.io/lazyfill/`.
+8. Load the extension (section 2), open the lazyfill dashboard, go to **Settings**, and paste the config block from
+   step 2 into the **Firebase project** box. Press **Save and connect**. lazyfill checks the key with Firebase and
+   tells you if something is off, for example that Authentication is not enabled yet. After that, create your account
+   in the **Account** box on the same page. Switching to a different project later signs you out and clears the data
+   stored in this browser; nothing is deleted from either project.
+   The web tracker asks for the same config the first time you open it and keeps it in that browser. If you would
+   rather bake a config into a build, copy [`.env.example`](.env.example) to `.env.local` and fill it in; a pasted
+   config always wins over a baked one.
+   Set `SITE_URL` in [`src/shared/config.ts`](src/shared/config.ts) to the address where you will publish the web
+   tracker, with a trailing slash, for example `https://your-name.github.io/lazyfill/`. It is only used for the
+   privacy and terms links.
 9. Update `homepage_url` in `public/manifest.json` and `homepage` in `package.json` to the same address, then rebuild
    and reload the extension.
 
@@ -136,10 +143,10 @@ The workflow in [`.github/workflows/pages.yml`](.github/workflows/pages.yml) bui
 Pages on every push to `main`.
 
 1. Push the repository to GitHub.
-2. In the repository, open **Settings, Secrets and variables, Actions, Variables** and add one repository variable per
-   line of [`.env.example`](.env.example) (`VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_PROJECT_ID`, and so on) with the
-   values of your web app config. Use variables, not secrets: the values are public once the site is built. The Pages
-   and release workflows pass them to the build. `ci.yml` builds without them, which is enough to check that it compiles.
+2. Optional: to make your own copy of the site open already connected, open **Settings, Secrets and variables, Actions,
+   Variables** and add one repository variable per line of [`.env.example`](.env.example). Use variables, not secrets:
+   the values are public once the site is built. Without them the site asks each visitor for a config, which is what
+   you want for a public fork.
 3. Open **Settings, Pages** and set **Source** to **GitHub Actions**.
 4. Push a change, or run the workflow manually. When it finishes, the site is at the address in `SITE_URL`.
 
@@ -303,7 +310,7 @@ either place appear in the other.
 
 | Name | Purpose |
 |---|---|
-| `FIREBASE_CONFIG` | The Firebase web app config, read at build time from the `VITE_FIREBASE_*` variables in `.env.local` (see `.env.example`). Identifies the project the extension and web page talk to. |
+| Firebase config | Not a constant. Pasted in Settings and stored in the browser (`lf_firebase_config` in the extension, `localStorage` on the web tracker), or optionally baked in at build time from the `VITE_FIREBASE_*` variables in `.env.local`. |
 | `SITE_URL` | Where the web tracker is published. The Settings page links to it. |
 | `PRIVACY_URL`, `TERMS_URL` | Derived from `SITE_URL`. Linked from the dashboard and panel. |
 | `NOT_AFFILIATED` | The disclaimer shown in footers. |
@@ -414,6 +421,9 @@ site handler, and adding a message between the pages and the service worker.
 
 | Symptom | Likely cause and fix |
 |---|---|
+| The panel says "Connect your Firebase project" | No config has been pasted yet. Open the dashboard, go to Settings, and paste the web app config from the Firebase console. |
+| "Firebase says this API key is not valid" | The key was copied wrongly or belongs to another project. Copy the whole block again from Project settings, Your apps, Web app. |
+| "This API key is restricted in a way that blocks the extension" | In Google Cloud, Credentials, the key's **Application restrictions** must be **None**. Restrict it by **API** only (Identity Toolkit, Token Service, Cloud Firestore); a website restriction blocks the extension. |
 | The panel does not open on an application | The page may not look like an application to the detector. Click the toolbar icon to open it manually. Pages in a background tab are ignored until they are shown. |
 | "Best effort" instead of a platform name | The site is not a known applicant tracking system. The general engine fills what it understands by label, name and ARIA attributes. |
 | Autofill reports few fields | The fields may already have values, since they are never overwritten, or the form loads later. Press Autofill again once the form is visible. |

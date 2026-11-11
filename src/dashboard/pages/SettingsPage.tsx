@@ -6,6 +6,8 @@ import { getItem, setItem } from '../../shared/storage';
 import type { AiSettings } from '../../shared/types';
 import type { SessionInfo } from '../../panel/useProfiles';
 import { MIN_PASSWORD, usePasswordAuth } from '../../panel/useSignIn';
+import type { FirebaseSetupStatus } from '../../shared/firebaseConfig';
+import { FirebaseSetup } from '../FirebaseSetup';
 import { btnGhost, btnPrimary, card, Field, inputCls, Notice } from '../ui';
 
 type Status = { ok: boolean; text: string } | null;
@@ -26,7 +28,7 @@ function AccountCard({ session, onChange }: { session: SessionInfo | null; onCha
   return (
     <section className={`${card} grid gap-4`}>
       <div>
-        <h2 className="text-lg font-semibold">1 · Account</h2>
+        <h2 className="text-lg font-semibold">2 · Account</h2>
         <p className="text-sm text-muted-foreground">Sign in with your email and password. The same account works on the web tracker.</p>
       </div>
       {session ? (
@@ -82,7 +84,7 @@ function PromptCard() {
   return (
     <section className={`${card} grid gap-4`}>
       <div>
-        <h2 className="text-lg font-semibold">3 · “Generate with lazyfill” prompt</h2>
+        <h2 className="text-lg font-semibold">4 · “Generate with lazyfill” prompt</h2>
         <p className="text-sm font-medium text-muted-foreground">On an application, select a question, right-click and choose <b>Generate with lazyfill</b>. This is the prompt it sends. Placeholders: {'{{profile}}'}, {'{{jobTitle}}'}, {'{{company}}'}, {'{{description}}'}, {'{{question}}'}, {'{{hint}}'} (your answer-bank notes).</p>
       </div>
       <textarea rows={16} spellCheck={false} disabled={!loaded} className={`${inputCls} h-auto py-2 font-mono text-xs`} value={text} onChange={(e) => setText(e.target.value)} aria-label="Prompt template" />
@@ -114,7 +116,7 @@ function AiCard() {
   return (
     <section className={`${card} grid gap-4`}>
       <div>
-        <h2 className="text-lg font-semibold">2 · AI key <span className="text-xs font-semibold text-muted-foreground">(optional)</span></h2>
+        <h2 className="text-lg font-semibold">3 · AI key <span className="text-xs font-semibold text-muted-foreground">(optional)</span></h2>
         <p className="text-sm font-medium text-muted-foreground">Used to import profiles from your resume and to write answers with “Generate with lazyfill”. Stored only in this browser. When you use an AI feature, the resume pages, question text, profile summary and job details it needs are sent to the provider you choose, under that provider’s own terms. Free-tier plans (Google’s in particular) may use what you send to improve their products; paid plans generally do not. Check your provider’s policy.</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
@@ -183,14 +185,32 @@ function DeleteAccount({ onDone }: { onDone: () => void }) {
 }
 
 export function SettingsPage({ session, onSessionChange }: { session: SessionInfo | null; onSessionChange: () => void }) {
+  const [fb, setFb] = useState<FirebaseSetupStatus | null>(null);
+  const loadFirebase = () => send<FirebaseSetupStatus>({ action: 'getFirebaseSetup' }).then((r) => r.success && r.data && setFb(r.data));
+  useEffect(() => { loadFirebase(); }, []);
+
+  async function saveFirebase(text: string) {
+    const r = await send<{ projectId: string; note?: string }>({ action: 'saveFirebaseConfig', text });
+    if (!r.success) throw new Error(r.error ?? 'Could not save that config.');
+    await loadFirebase();
+    onSessionChange();
+    return r.data?.note;
+  }
+  async function clearFirebase() {
+    await send({ action: 'clearFirebaseConfig' });
+    await loadFirebase();
+    onSessionChange();
+  }
+
   return (
     <div className="grid gap-6">
       <div>
         <h1 className="text-2xl font-semibold">Settings</h1>
-        <p className="text-sm font-medium text-muted-foreground">Sign in once. After that, autofill and tracking work on their own.</p>
+        <p className="text-sm font-medium text-muted-foreground">Connect your Firebase project and sign in once. After that, autofill and tracking work on their own.</p>
       </div>
-      
-      <AccountCard session={session} onChange={onSessionChange} />
+
+      {fb && <FirebaseSetup status={fb} onSave={saveFirebase} onClear={clearFirebase} />}
+      {fb?.configured && <AccountCard session={session} onChange={onSessionChange} />}
       <AiCard />
       <PromptCard />
       {session && <DeleteAccount onDone={onSessionChange} />}

@@ -4,9 +4,44 @@ import {
   signInWithEmailAndPassword, signOut as fbSignOut, type User,
 } from 'firebase/auth';
 import { getFirestore, initializeFirestore } from 'firebase/firestore';
-import { FIREBASE_CONFIG } from '../../src/shared/config';
+import { buildTimeFirebaseConfig } from '../../src/shared/config';
+import { parseFirebaseConfig, type FirebaseSetupStatus } from '../../src/shared/firebaseConfig';
+import type { FirebaseConfig } from '../../src/shared/types';
 
-const app = initializeApp(FIREBASE_CONFIG);
+const CONFIG_KEY = 'lf_firebase_config';
+
+function pasted(): FirebaseConfig | null {
+  try {
+    const c = JSON.parse(localStorage.getItem(CONFIG_KEY) ?? 'null') as FirebaseConfig | null;
+    return c?.apiKey && c?.projectId ? c : null;
+  } catch {
+    return null;
+  }
+}
+
+const chosen = pasted();
+const active = chosen ?? buildTimeFirebaseConfig();
+
+/** Whether this page knows which Firebase project to talk to. When it does not, App shows the setup screen first. */
+export const webStatus: FirebaseSetupStatus = active
+  ? { configured: true, projectId: active.projectId, source: chosen ? 'pasted' : 'build' }
+  : { configured: false, projectId: '', source: 'none' };
+
+/** Saves a pasted config for this browser and reloads, because the Firebase SDK reads its config once at start. */
+export function saveWebConfig(text: string): Promise<never> {
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(parseFirebaseConfig(text)));
+  location.reload();
+  return new Promise<never>(() => {}); // stays pending until the page reloads
+}
+
+export function clearWebConfig(): Promise<never> {
+  localStorage.removeItem(CONFIG_KEY);
+  location.reload();
+  return new Promise<never>(() => {});
+}
+
+// A placeholder keeps the imports below harmless until a real config exists.
+const app = initializeApp(active ?? { apiKey: 'not-configured', projectId: 'not-configured' });
 export const auth = getAuth(app);
 // the extension leaves optional fields out; the web page should too
 export const db = (() => {

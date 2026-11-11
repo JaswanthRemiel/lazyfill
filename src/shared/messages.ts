@@ -16,6 +16,9 @@ export type Message =
   | { action: 'signOut' }
   | { action: 'deleteAccount'; password: string }
   | { action: 'getSession' }
+  | { action: 'getFirebaseSetup' }
+  | { action: 'saveFirebaseConfig'; text: string }
+  | { action: 'clearFirebaseConfig' }
   | { action: 'listProfiles' }
   | { action: 'saveProfile'; profile: Profile }
   | { action: 'deleteProfile'; id: string }

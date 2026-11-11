@@ -1,4 +1,4 @@
-import { FIREBASE_CONFIG } from '../../shared/config';
+import { getFirebaseConfig } from './config';
 import { getValidSession } from './auth';
 
 export class FirestoreError extends Error {
@@ -49,7 +49,8 @@ export function decodeFields(f: Record<string, FsValue>): Record<string, unknown
 
 async function request(method: string, path: string, body?: unknown, query = ''): Promise<unknown> {
   const session = await getValidSession();
-  const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents/${path}${query}`;
+  const { projectId } = await getFirebaseConfig();
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${path}${query}`;
   let res: Response;
   try {
     res = await fetch(url, {

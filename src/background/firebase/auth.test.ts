@@ -6,6 +6,7 @@ let fetchMock: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   vi.resetModules();
   for (const k of Object.keys(local)) delete local[k];
+  local.lf_firebase_config = { apiKey: 'test-key', projectId: 'test-project' };
   vi.stubGlobal('chrome', {
     storage: { local: { get: async (k: string) => ({ [k]: local[k] }), set: async (o: object) => Object.assign(local, o), remove: async (k: string) => delete local[k] } },
   });
