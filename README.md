@@ -324,6 +324,7 @@ src/resume       PDF reading in the browser: text, links and page images
 src/shared       types, profile model, JSON import and export, prompts, resume verification
 src/ui           design tokens, component kit, shared pieces
 web              the tracker site published to GitHub Pages
+site             the landing page (Next.js), deployed to Vercel (standalone, own package.json)
 dev              mock chrome API and harness pages for visual checks
 scripts          packaging, notices, screenshots
 tests/fixtures   a fictional two column resume PDF used by the PDF reader tests
@@ -343,11 +344,17 @@ changes.
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `ci.yml` | Pull requests and pushes to `main` | Typecheck, tests and both builds. |
+| `ci.yml` | Pull requests and pushes to `main` | Typecheck, tests, both builds, and the landing page build. |
 | `pages.yml` | Pushes to `main` that touch the site or source | Builds `web/` and deploys it to GitHub Pages. |
 | `release.yml` | Pushing a tag such as `v1.0.0` | Runs the tests and `npm run package`, then attaches the zip to a GitHub release. Uses the same repository variables as `pages.yml`. |
 
 Keep `version` in `package.json` and `public/manifest.json` equal. `npm run package` refuses to run if they differ.
+
+### Landing page
+
+The project website lives in [`site/`](site/), a standalone Next.js app with its own `package.json`. It is
+deployed by Vercel's Git integration whenever something under `site/` changes on `main` (pull requests get preview
+addresses). Setup and local development are described in [site/README.md](site/README.md).
 
 ### Adding a field, a site or a feature
 
