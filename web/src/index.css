@@ -1,3 +1,0 @@
-@import "../../src/ui/theme.css";
-/* the tracker page reuses the dashboard's components, so Tailwind has to scan them too */
-@source "../../src";
