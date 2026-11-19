@@ -4,7 +4,7 @@ import './globals.css';
 
 const title = 'lazyfill - autofill job applications, track every one';
 const description =
-  'lazyfill is a free, open source Chrome extension that fills job applications from your profile, tracks every application, and drafts answers with your own AI key. Your data stays in your own Firebase project.';
+  'lazyfill is a free, open source Chrome extension that fills job applications from your profile, tracks every application, and drafts answers with your own AI key. Your data stays in your browser.';
 
 export const metadata: Metadata = {
   // Set NEXT_PUBLIC_SITE_URL in Vercel when you add a custom domain; Vercel's own address is used otherwise.
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   description,
   openGraph: {
     title,
-    description: 'Free, open source, self-hosted. Fill applications in one click, track what you applied to, and keep your data in your own Firebase project.',
+    description: 'Free and open source. Fill applications in one click, track what you applied to, and keep your data in your browser.',
     type: 'website',
     images: [{ url: '/screenshots/2-autofills-in-one-click.png', width: 1280, height: 800, alt: 'lazyfill filling a job application' }],
     videos: [{ url: '/video/demo.mp4', width: 1920, height: 1080, type: 'video/mp4' }],

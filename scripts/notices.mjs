@@ -1,7 +1,7 @@
 // Writes THIRD_PARTY_NOTICES.txt from the packages the extension and the web page actually ship.
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
-const SHIPPED = ['react', 'react-dom', 'scheduler', 'react-router', 'react-router-dom', '@remix-run/router', 'lucide-react', 'clsx', 'tailwind-merge', 'pdfjs-dist', 'firebase', 'tailwindcss'];
+const SHIPPED = ['react', 'react-dom', 'scheduler', 'react-router', 'react-router-dom', '@remix-run/router', 'lucide-react', 'clsx', 'tailwind-merge', 'pdfjs-dist', 'tailwindcss'];
 
 const out = ['THIRD-PARTY SOFTWARE NOTICES', '', 'lazyfill includes the open-source packages below. Each is used under its own license.', ''];
 for (const name of SHIPPED) {

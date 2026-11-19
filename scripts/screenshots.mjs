@@ -1,6 +1,6 @@
 // Regenerates docs/screenshots from the real extension.
 //   npm run build && npx vite build --config vite.dev.config.ts && node scripts/screenshots.mjs
-// It loads dist/ into a headless Chromium browser with a fictional profile, opens the demo form from web/public,
+// It loads dist/ into a headless Chromium browser with a fictional profile, opens the demo form from dev/,
 // and captures the panel before and after Autofill, then the dashboard screens from the dev harness.
 // Set BROWSER to use something other than Brave or Chrome.
 import { spawn } from 'node:child_process';
@@ -18,7 +18,7 @@ if (!browser) throw new Error('No Chromium browser found. Set BROWSER=/path/to/b
 if (!existsSync(join(dist, 'manifest.json'))) throw new Error('Build first: npm run build');
 mkdirSync(out, { recursive: true });
 
-// small static servers: web/public for the demo page, dist-dev for the dashboard and dialog screens
+// small static servers: dev/ for the demo page, dist-dev for the dashboard and dialog screens
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.mjs': 'text/javascript' };
 const serve = async (dir, index) => {
   const server = http.createServer((req, res) => {
@@ -30,7 +30,7 @@ const serve = async (dir, index) => {
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   return { server, base: `http://127.0.0.1:${server.address().port}` };
 };
-const demo = await serve(join(root, 'web/public'), 'demo.html');
+const demo = await serve(join(root, 'dev'), 'demo.html');
 const demoUrl = `${demo.base}/demo.html`;
 const devDir = join(root, 'dist-dev');
 const dev = existsSync(devDir) ? await serve(devDir, 'index.html') : null;
@@ -79,7 +79,7 @@ try {
   }
   const sw = connect(list.find((t) => t.type === 'service_worker').webSocketDebuggerUrl);
   await sw.ready;
-  const seed = { lf_session: { uid: 'demo', email: 'ada@example.com', idToken: 'x', refreshToken: 'x', expiresAt: Date.now() + 1e10 }, lf_profile_cache: [profile], lf_active_profile_id: 'demo' };
+  const seed = { lf_profile_cache: [profile], lf_active_profile_id: 'demo' };
   await sw.call('Runtime.evaluate', { expression: `chrome.storage.local.set(${JSON.stringify(seed)})`, awaitPromise: true });
   sw.close();
 

@@ -3,9 +3,6 @@ import {
 } from '../shared/answers';
 import { getItem, setItem } from '../shared/storage';
 import { callLlmWithFallback } from './ai';
-import { getDoc } from './firebase/firestore';
-import { enqueue } from './firebase/queue';
-import * as auth from './firebase/auth';
 import { getActiveProfile } from './data';
 import { knownJob } from './tracker';
 
@@ -30,27 +27,12 @@ export type GenerateResult =
 /** The prompt: your edited copy if there is one, else the built-in text. */
 export async function getPromptTemplate(): Promise<string> {
   const local = await getItem('lf_prompt_template');
-  if (local?.trim()) return local;
-  // another browser may have saved one; try Firestore once, quietly
-  try {
-    const session = await auth.getSession();
-    if (session) {
-      const doc = await getDoc(`users/${session.uid}/settings/prompt`);
-      if (typeof doc?.template === 'string' && doc.template.trim()) {
-        await setItem('lf_prompt_template', doc.template);
-        return doc.template;
-      }
-    }
-  } catch { /* offline or not signed in: use the default */ }
-  return DEFAULT_PROMPT_TEMPLATE;
+  return local?.trim() ? local : DEFAULT_PROMPT_TEMPLATE;
 }
 
 /** An empty template resets to the built-in prompt. */
 export async function savePromptTemplate(template: string): Promise<void> {
-  const text = template.trim() ? template : '';
-  await setItem('lf_prompt_template', text);
-  const session = await auth.getSession();
-  if (session) await enqueue({ op: 'set', path: `users/${session.uid}/settings/prompt`, data: { template: text, updatedAt: new Date().toISOString() } });
+  await setItem('lf_prompt_template', template.trim() ? template : '');
 }
 
 export async function generateAnswer(req: GenerateRequest): Promise<GenerateResult> {

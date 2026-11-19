@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { send } from '../../shared/messages';
 import type { LearnedEntry, LearnedStore } from '../../shared/learned';
 import { getItem } from '../../shared/storage';
 import type { Profile } from '../../shared/types';
-import { btnGhost, btnPrimary, card, inputCls, Notice } from '../ui';
+import { btnGhost, card, inputCls, Notice } from '../ui';
 
 const show = (v: LearnedEntry['value']) => (Array.isArray(v) ? v.join(', ') : v);
 const when = (iso: string) => (iso ? new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Never');
@@ -33,7 +32,7 @@ function Row({ profileId, scope, k, e, onChange }: { profileId: string; scope: s
   );
 }
 
-export function AnswersPage({ signedIn }: { signedIn: boolean }) {
+export function AnswersPage() {
   const [store, setStore] = useState<LearnedStore>({});
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [query, setQuery] = useState('');
@@ -45,14 +44,6 @@ export function AnswersPage({ signedIn }: { signedIn: boolean }) {
   }, []);
   useEffect(() => { void load(); }, [load]);
 
-  if (!signedIn) {
-    return (
-      <div className={`${card} mx-auto max-w-lg text-center`}>
-        <h1 className="text-lg font-semibold">Sign in to see your saved answers</h1>
-        <Link to="/settings" className={`${btnPrimary} mt-4`}>Open Settings</Link>
-      </div>
-    );
-  }
 
   const ids = Object.keys(store).filter((id) => Object.values(store[id]).some((m) => Object.keys(m).length));
   const nameOf = (id: string) => profiles.find((p) => p.id === id)?.name ?? 'Deleted profile';

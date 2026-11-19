@@ -16,8 +16,11 @@ npm start          # serve the production build
 npm run typecheck  # TypeScript only
 ```
 
-Content lives in [`app/page.tsx`](app/page.tsx); title, description and social preview metadata in
-[`app/layout.tsx`](app/layout.tsx); styles and colour tokens in [`app/globals.css`](app/globals.css). Screenshots are in [`public/screenshots`](public/screenshots); they are
+Content lives in [`app/page.tsx`](app/page.tsx). The privacy policy and terms are served at `/privacy` and `/terms`
+from [`app/privacy/page.tsx`](app/privacy/page.tsx) and [`app/terms/page.tsx`](app/terms/page.tsx), which share the
+layout in [`components/LegalPage.tsx`](components/LegalPage.tsx). The extension links to these two pages (`LEGAL` in
+`src/shared/tracker.ts` in the repository root), so keep their paths stable. Title, description and social preview metadata are in
+[`app/layout.tsx`](app/layout.tsx), and styles and colour tokens in [`app/globals.css`](app/globals.css). Screenshots are in [`public/screenshots`](public/screenshots); they are
 copies of the ones in `docs/screenshots`, so refresh them here when those change (`npm run screenshots` in the repository
 root regenerates the originals). Colours match the extension's design tokens and follow the visitor's light or dark
 system setting.

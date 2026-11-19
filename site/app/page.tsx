@@ -93,7 +93,7 @@ function Hero() {
         </h1>
         <p className="mx-auto mt-6 max-w-2xl animate-rise text-[17px] leading-relaxed text-muted-foreground [animation-delay:120ms] sm:text-[19px]">
           lazyfill is a Chrome extension that fills job applications from your profile, remembers the answers you give,
-          and tracks everything you apply to. Your data lives in your own Firebase project, not on someone else&apos;s server.
+          and tracks everything you apply to. Your data stays in your browser. No account, no server.
         </p>
         <div className="mt-9 flex animate-rise flex-col items-center justify-center gap-3 [animation-delay:180ms] sm:flex-row">
           <a href={REPO} className={btnPrimary}><GitHubMark className="size-[18px]" /> Get it on GitHub</a>
@@ -164,7 +164,7 @@ const SHOWCASE = [
     alt: 'The dashboard listing tracked applications with their status',
     eyebrow: 'Track',
     title: 'A tracker that fills itself in.',
-    points: ['Applications are recorded when you fill them and marked submitted when the confirmation page appears.', 'Set statuses from applied to offer, add notes, and filter.', 'Open the same list from any browser with your own web tracker.'],
+    points: ['Applications are recorded when you fill them and marked submitted when the confirmation page appears.', 'Set statuses from applied to offer, add notes, and filter.', 'Export a backup any time and restore it on another computer.'],
   },
   {
     src: '/screenshots/4-review-before-anything-is-added.png',
@@ -207,7 +207,7 @@ function Showcase() {
 
 const STEPS = [
   { title: 'Build and load', body: 'Clone the repository, run npm install and npm run build, and load the dist folder as an unpacked extension.', code: 'npm install && npm run build' },
-  { title: 'Connect your Firebase', body: 'Create a free Firebase project, paste its web config into Settings, and create your account. About ten minutes, once.', code: 'Settings > Firebase project' },
+  { title: 'Create a profile', body: 'Type it in or import it from your resume with your own AI key. No account to create; it is stored in your browser.', code: 'Dashboard > Profiles' },
   { title: 'Open an application', body: 'Pick a profile, press Autofill, review every field, and submit it yourself. lazyfill records it in your tracker.', code: 'Autofill' },
 ];
 
@@ -236,9 +236,9 @@ function How() {
 }
 
 const PRIVACY = [
-  { icon: <Database />, title: 'Your Firebase, your data', body: 'Profiles and applications are stored in a Firebase project you own. Security rules let only your verified account read them.' },
+  { icon: <Database />, title: 'Stored in your browser', body: 'Profiles, resumes, applications and saved answers live in the extension\'s local storage on your computer. There is no account and no cloud copy.' },
   { icon: <EyeOff />, title: 'No servers, no tracking', body: 'There is no lazyfill backend. The code sends nothing to its authors and contains no analytics, trackers or ads.' },
-  { icon: <Lock />, title: 'Keys stay in your browser', body: 'Your AI key and Firebase config are kept in the browser. AI requests go straight to the provider you chose, only when you use them.' },
+  { icon: <Lock />, title: 'Keys stay in your browser', body: 'Your AI key is kept in the browser. AI requests go straight to the provider you chose, only when you use them.' },
   { icon: <Hand />, title: 'You stay in control', body: 'lazyfill never submits a form, never ticks consent boxes, and never saves passwords, ID numbers or dates of birth.' },
 ];
 
@@ -247,7 +247,7 @@ function Privacy() {
     <Section id="privacy" className="pb-24">
       <div className="rounded-[28px] bg-primary px-6 py-14 text-primary-foreground sm:px-12 sm:py-16">
         <p className="text-[13px] font-semibold tracking-wide uppercase opacity-60">Privacy by design</p>
-        <h2 className="mt-3 max-w-3xl text-[34px] leading-tight font-semibold tracking-[-0.025em] sm:text-[44px]">Self-hosted, so nobody else holds your job search.</h2>
+        <h2 className="mt-3 max-w-3xl text-[34px] leading-tight font-semibold tracking-[-0.025em] sm:text-[44px]">Local-first, so nobody else holds your job search.</h2>
         <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {PRIVACY.map((p) => (
             <div key={p.title}>
@@ -263,9 +263,9 @@ function Privacy() {
 }
 
 const FAQ = [
-  { q: 'Is it free?', a: 'Yes. lazyfill is open source under the MIT license. The Firebase free plan covers personal use. AI features use your own Gemini or OpenAI key, billed by that provider, and are optional.' },
+  { q: 'Is it free?', a: 'Yes. lazyfill is open source under the MIT license. AI features use your own Gemini or OpenAI key, billed by that provider, and are optional.' },
   { q: 'Do I need an AI key?', a: 'No. Autofill, saved answers and the tracker work without one. A key only adds resume import and drafted answers.' },
-  { q: 'Why do I need a Firebase project?', a: 'So your account and data are stored somewhere you own instead of on a shared server. You create it once in the Firebase console and paste its config into the extension.' },
+  { q: 'Where is my data stored?', a: 'Only in your browser, in the extension\'s local storage. Removing the extension deletes it, so use Settings > Export backup to keep a copy or move to another computer.' },
   { q: 'Is it in the Chrome Web Store?', a: 'Not at the moment. You build it from the repository and load it as an unpacked extension. The setup guide walks you through it.' },
   { q: 'Which browsers does it support?', a: 'Chromium based browsers, version 114 or newer: Chrome, Edge and Brave. Firefox and Safari are not supported.' },
   { q: 'Will it submit applications for me?', a: 'Never. It fills the form and stops. You review every field and press submit yourself.' },
@@ -319,6 +319,8 @@ function Footer() {
           <a className="hover:text-foreground" href={SETUP}>Setup guide</a>
           <a className="hover:text-foreground" href={`${REPO}/issues`}>Report an issue</a>
           <a className="hover:text-foreground" href={`${REPO}/blob/main/LICENSE`}>MIT license</a>
+          <a className="hover:text-foreground" href="/privacy">Privacy policy</a>
+          <a className="hover:text-foreground" href="/terms">Terms</a>
         </div>
         <p className="max-w-4xl leading-relaxed">
           lazyfill is an independent project. It is not affiliated with, endorsed by or sponsored by any employer, job board,

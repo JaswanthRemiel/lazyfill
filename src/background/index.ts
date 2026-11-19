@@ -2,13 +2,9 @@ import type { Message, MessageResponse } from '../shared/messages';
 import { extractProfileFromResume, testAi } from './ai';
 import * as data from './data';
 import * as learned from './learned';
-import * as auth from './firebase/auth';
-import { clearFirebaseConfig, firebaseStatus, getTrackerLink, saveFirebaseConfig } from './firebase/config';
-import { getDoc, setDoc } from './firebase/firestore';
-import { deleteAccount } from './account';
+import { deleteAllData, exportBackup, importBackup } from './backup';
 import * as tracker from './tracker';
 import { generateAnswer, getPromptTemplate, savePromptTemplate } from './generate';
-import { flushQueue, pendingCount } from './firebase/queue';
 
 /** Toolbar button: show or hide the panel on the current page. */
 chrome.action.onClicked.addListener(async (tab) => {
@@ -42,61 +38,26 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   chrome.tabs.sendMessage(tab.id, { action: 'startSelection' }).catch(() => {});
 });
 
-const FLUSH_ALARM = 'lf-flush-queue';
-
 chrome.tabs.onRemoved.addListener((tabId) => { tracker.forgetTab(tabId).catch(() => {}); });
 
 chrome.runtime.onInstalled.addListener((details) => {
-  chrome.alarms.create(FLUSH_ALARM, { periodInMinutes: 1 });
   chrome.contextMenus.removeAll(createSelectionMenu);
   if (details.reason === 'install') {
     chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
   }
 });
 
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === FLUSH_ALARM) flushQueue().catch(() => {});
-});
-
-async function testConnection() {
-  const session = await auth.getValidSession();
-  const path = `users/${session.uid}/settings/connection-test`;
-  const stamp = new Date().toISOString();
-  await setDoc(path, { checkedAt: stamp });
-  const back = await getDoc(path);
-  if (back?.checkedAt !== stamp) throw new Error('Wrote a document but could not read it back. Check your Firestore rules.');
-  return { uid: session.uid, email: session.email };
-}
-
 async function handle(msg: Message, sender: chrome.runtime.MessageSender): Promise<unknown> {
   const tabId = sender.tab?.id;
   switch (msg.action) {
     case 'ping':
       return 'pong';
-    case 'testConnection':
-      return testConnection();
-    case 'signIn':
-      return auth.signIn(msg.email, msg.password).then(async (r) => { if (r === 'ok') flushQueue().catch(() => {}); return r; });
-    case 'signUp':
-      return auth.signUp(msg.email, msg.password);
-    case 'resendVerification':
-      return auth.resendVerification(msg.email, msg.password);
-    case 'sendPasswordReset':
-      return auth.sendPasswordReset(msg.email);
-    case 'deleteAccount':
-      return deleteAccount(msg.password);
-    case 'signOut':
-      return auth.signOut();
-    case 'getFirebaseSetup':
-      return firebaseStatus();
-    case 'saveFirebaseConfig':
-      return saveFirebaseConfig(msg.text);
-    case 'clearFirebaseConfig':
-      return clearFirebaseConfig();
-    case 'getTrackerLink':
-      return getTrackerLink();
-    case 'getSession':
-      return auth.getSession().then((s) => (s ? { uid: s.uid, email: s.email } : null));
+    case 'exportBackup':
+      return exportBackup();
+    case 'importBackup':
+      return importBackup(msg.text);
+    case 'deleteAllData':
+      return deleteAllData();
     case 'listProfiles':
       return data.listProfiles();
     case 'saveProfile':
@@ -129,8 +90,6 @@ async function handle(msg: Message, sender: chrome.runtime.MessageSender): Promi
       return getPromptTemplate();
     case 'savePromptTemplate':
       return savePromptTemplate(msg.template);
-    case 'submitReport':
-      return data.saveReport(msg.description, msg.screenshot);
     case 'getLearned':
       return learned.getLearned(msg.profileId, msg.scope);
     case 'saveLearned':
@@ -151,8 +110,6 @@ async function handle(msg: Message, sender: chrome.runtime.MessageSender): Promi
       return tabId === undefined ? null : tracker.trackFilled(tabId, msg.info).then(() => null);
     case 'trackSubmitted':
       return tabId === undefined ? null : tracker.trackSubmitted(tabId, msg.info, msg.armed, sender.tab?.title).then(() => null);
-    case 'flushQueue':
-      return flushQueue().then(async (r) => ({ ...r, pending: await pendingCount() }));
     default:
       return null;
   }

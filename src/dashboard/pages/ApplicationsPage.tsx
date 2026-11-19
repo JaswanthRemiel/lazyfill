@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { onApplicationsChanged, send } from '../../shared/messages';
 import type { Application, ApplicationStatus } from '../../shared/types';
 import { btnGhost, btnPrimary, card, Field, inputCls, Notice } from '../ui';
@@ -25,17 +24,16 @@ const download = (name: string, text: string, type: string) => {
 };
 const csvCell = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
 
-function useApplications(signedIn: boolean) {
+function useApplications() {
   const [apps, setApps] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
-    if (!signedIn) { setLoading(false); return; }
     const r = await send<Application[]>({ action: 'listApplications' });
     if (r.success) setApps(r.data ?? []); else setError(r.error ?? 'Could not load applications');
     setLoading(false);
-  }, [signedIn]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => onApplicationsChanged(setApps), []);
@@ -151,8 +149,8 @@ function Row({ a, onSave, onDelete }: { a: Application; onSave: (a: Application)
   );
 }
 
-export function ApplicationsPage({ signedIn }: { signedIn: boolean }) {
-  const { apps, loading, error, setError, save, remove } = useApplications(signedIn);
+export function ApplicationsPage() {
+  const { apps, loading, error, setError, save, remove } = useApplications();
   const [filter, setFilter] = useState<ApplicationStatus | 'all'>('all');
   const [query, setQuery] = useState('');
   const [adding, setAdding] = useState(false);
@@ -192,15 +190,6 @@ export function ApplicationsPage({ signedIn }: { signedIn: boolean }) {
     }
   }
 
-  if (!signedIn) {
-    return (
-      <div className={`${card} mx-auto max-w-lg text-center`}>
-        <h1 className="text-lg font-semibold">Sign in to see your applications</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Applications are saved to your account. Sign in with your email under Settings.</p>
-        <Link to="/settings" className={`${btnPrimary} mt-4`}>Open Settings</Link>
-      </div>
-    );
-  }
 
   return (
     <div className="grid gap-6">

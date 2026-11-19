@@ -1,7 +1,6 @@
 import { Moon, Sun } from 'lucide-react';
 import { useEffect } from 'react';
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
-import { useSession } from '../panel/useProfiles';
 import { cn } from '../ui/cn';
 import { LegalFooter } from '../ui/Legal';
 import { Wordmark } from '../ui/kit';
@@ -17,7 +16,6 @@ const tab = ({ isActive }: { isActive: boolean }) =>
 
 export function App() {
   const { isDark, setTheme } = useTheme();
-  const { session, refresh } = useSession();
   useEffect(() => { document.title = 'lazyfill'; }, []);
 
   return (
@@ -32,7 +30,6 @@ export function App() {
             <NavLink to="/settings" className={tab}>Settings</NavLink>
           </nav>
           <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
-            {session ? <span>{session.email}</span> : <NavLink to="/settings" className="font-medium text-foreground underline-offset-2 hover:underline">Sign in</NavLink>}
             <button type="button" aria-label="Toggle dark mode" onClick={() => setTheme(isDark ? 'light' : 'dark')}
               className="flex size-8 items-center justify-center rounded-full border border-border text-foreground transition-colors hover:bg-muted">
               {isDark ? <Sun className="size-4" strokeWidth={1.75} /> : <Moon className="size-4" strokeWidth={1.75} />}
@@ -42,11 +39,11 @@ export function App() {
       </header>
       <main className="mx-auto max-w-6xl px-6 py-8">
         <Routes>
-          <Route path="/applications" element={<ApplicationsPage signedIn={!!session} />} />
-          <Route path="/profiles" element={<ProfilesPage signedIn={!!session} />} />
-          <Route path="/profiles/:id" element={<ProfileEditorPage signedIn={!!session} />} />
-          <Route path="/answers" element={<AnswersPage signedIn={!!session} />} />
-          <Route path="/settings" element={<SettingsPage session={session ?? null} onSessionChange={refresh} />} />
+          <Route path="/applications" element={<ApplicationsPage />} />
+          <Route path="/profiles" element={<ProfilesPage />} />
+          <Route path="/profiles/:id" element={<ProfileEditorPage />} />
+          <Route path="/answers" element={<AnswersPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/applications" replace />} />
         </Routes>
         <LegalFooter className="mt-12" />

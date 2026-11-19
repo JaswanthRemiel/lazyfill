@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useProfiles } from '../../panel/useProfiles';
 import { send } from '../../shared/messages';
 import { buildExport, buildTemplate, parseProfileImport, type ImportResult } from '../../shared/profileJson';
@@ -50,24 +50,15 @@ function ImportPreview({ result, existing, onCancel, onConfirm, busy }: {
   );
 }
 
-export function ProfilesPage({ signedIn }: { signedIn: boolean }) {
+export function ProfilesPage() {
   const nav = useNavigate();
-  const { profiles, active, loading, error, select, reload } = useProfiles(signedIn);
+  const { profiles, active, loading, error, select, reload } = useProfiles();
   const [err, setErr] = useState('');
   const [note, setNote] = useState('');
   const [preview, setPreview] = useState<ImportResult | null>(null);
   const [importing, setImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  if (!signedIn) {
-    return (
-      <div className={`${card} mx-auto max-w-lg text-center`}>
-        <h1 className="text-lg font-semibold">Sign in to manage profiles</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Profiles are saved to your account and cached on this device for offline autofill.</p>
-        <Link to="/settings" className={`${btnPrimary} mt-4`}>Open Settings</Link>
-      </div>
-    );
-  }
 
   async function remove(id: string, name: string) {
     if (!confirm(`Delete the profile "${name}"? This cannot be undone.`)) return;
@@ -101,7 +92,7 @@ export function ProfilesPage({ signedIn }: { signedIn: boolean }) {
     }
     setImporting(false);
     setPreview(null);
-    setNote(`Imported: ${created} created, ${updated} updated. They are saved to your account.`);
+    setNote(`Imported: ${created} created, ${updated} updated. They are saved in this browser.`);
     reload();
   }
 

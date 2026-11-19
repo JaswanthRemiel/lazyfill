@@ -24,7 +24,7 @@ const SECTIONS: { id: Sect; title: string; hint?: string; fields: Def[] }[] = [
     ['currentCompany', 'Current company'], ['currentTitle', 'Current title'], ['yearsOfExperience', 'Years of experience'],
     ['workAuthorization', 'Work authorization', ], ['requiresSponsorship', 'Requires sponsorship', YES_NO], ['willingToRelocate', 'Willing to relocate', YES_NO],
     ['desiredSalary', 'Desired salary'], ['noticePeriod', 'Notice period'], ['availableStartDate', 'Available start date'] ] },
-  { id: 'demographics', title: 'Demographics (optional)', hint: 'Sensitive and entirely optional. If you fill these in, you agree to lazyfill storing them in your account so it can answer these questions when a form asks. They are never used for anything else. Leave blank to skip, and clear them any time.', fields: [
+  { id: 'demographics', title: 'Demographics (optional)', hint: 'Sensitive and entirely optional. If you fill these in, they are stored only in this browser so lazyfill can answer these questions when a form asks. They are never used for anything else. Leave blank to skip, and clear them any time.', fields: [
     ['genderIdentity', 'Gender'], ['race', 'Race / ethnicity'], ['sexualOrientation', 'Sexual orientation'],
     ['veteranStatus', 'Veteran status'], ['disabilityStatus', 'Disability status'] ] },
 ];
@@ -48,7 +48,7 @@ function Input({ label, value, onChange, options, type }: { label: string; value
   );
 }
 
-export function ProfileEditorPage({ signedIn }: { signedIn: boolean }) {
+export function ProfileEditorPage() {
   const { id = 'new' } = useParams();
   const nav = useNavigate();
   const profileId = useMemo(() => (id === 'new' ? crypto.randomUUID() : id), [id]);
@@ -109,20 +109,17 @@ export function ProfileEditorPage({ signedIn }: { signedIn: boolean }) {
       setData(next);
       setDirty(true);
 
-      // 2) keep the file for autofill; failing to sync it is a warning, not an error
-      const s = await send<{ synced: boolean; reason?: string }>({ action: 'saveResume', profileId, file: f });
-      const warn = s.success && s.data && !s.data.synced ? ` ${s.data.reason}` : '';
+      // 2) keep the file for autofill
+      const s = await send({ action: 'saveResume', profileId, file: f });
+      if (!s.success) throw new Error(s.error ?? 'Could not store the resume file.');
 
       if (found) {
         // 3) show what was found; nothing is added until the user says so
         setReview({ review: buildReview(next, found), fileName: file.name, base: next });
-        if (warn) setNotice({ ok: false, text: warn.trim() });
-      } else if (signedIn) {
+      } else {
         const label = name.trim() || 'My profile';
         if (!name.trim()) setName(label);
-        if (await persist(label, next)) setNotice({ ok: true, text: `Resume attached. Saved to your profile.${warn}` });
-      } else {
-        setNotice({ ok: false, text: 'Resume attached. Sign in under Settings, then press Save to keep it.' });
+        if (await persist(label, next)) setNotice({ ok: true, text: 'Resume attached. Saved to your profile.' });
       }
     } catch (e) {
       setNotice({ ok: false, text: e instanceof Error ? e.message : 'Something went wrong.' });
@@ -139,11 +136,9 @@ export function ProfileEditorPage({ signedIn }: { signedIn: boolean }) {
     setDirty(true);
     const label = name.trim() || [next.personalInfo.firstName, next.personalInfo.lastName].filter(Boolean).join(' ') || 'My profile';
     if (!name.trim()) setName(label);
-    if (signedIn && (await persist(label, next))) {
+    if (await persist(label, next)) {
       setNotice({ ok: true, text: `Added ${added} item${added === 1 ? '' : 's'} from your resume and saved. Review the fields below.` });
       if (id === 'new') nav(`/profiles/${profileId}`, { replace: true });
-    } else {
-      setNotice({ ok: false, text: `Added ${added} item${added === 1 ? '' : 's'} from your resume. Sign in under Settings, then press Save to keep them.` });
     }
   }
 
@@ -158,9 +153,6 @@ export function ProfileEditorPage({ signedIn }: { signedIn: boolean }) {
     setBusy('');
   }
 
-  if (!signedIn) {
-    return <div className={`${card} mx-auto max-w-lg text-center`}><p className="font-semibold">Sign in to edit profiles.</p><Link to="/settings" className={`${btnPrimary} mt-4`}>Open Settings</Link></div>;
-  }
   if (!loaded) return <p className="text-sm text-muted-foreground">Loading…</p>;
 
   return (

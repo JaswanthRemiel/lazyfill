@@ -3,7 +3,7 @@
   "name": "lazyfill - Job Application Autofill",
   "short_name": "lazyfill",
   "version": "1.0.0",
-  "description": "Autofill job applications, track every one you send, and draft answers with AI. Your data stays in your own account.",
+  "description": "Autofill job applications, track every one you send, and draft answers with AI. Your data stays in your browser.",
   "minimum_chrome_version": "114",
   "homepage_url": "https://github.com/JaswanthRemiel/lazyfill",
   "icons": {
@@ -31,7 +31,6 @@
   },
   "permissions": [
     "unlimitedStorage",
-    "alarms",
     "activeTab",
     "storage",
     "tabs",
@@ -52,9 +51,6 @@
     "*://*.adp.com/*",
     "*://ats.rippling.com/*",
     "*://*.comeet.co/*",
-    "https://firestore.googleapis.com/*",
-    "https://identitytoolkit.googleapis.com/*",
-    "https://securetoken.googleapis.com/*",
     "https://generativelanguage.googleapis.com/*",
     "https://api.openai.com/*"
   ],

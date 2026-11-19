@@ -2,7 +2,6 @@ import { applicationIdFor, type JobInfo } from '../shared/job';
 import { getItem } from '../shared/storage';
 import type { Application, ApplicationStatus } from '../shared/types';
 import { getCachedApplication, saveApplication } from './data';
-import { getSession } from './firebase/auth';
 
 const SESSION_KEY = 'lf_tab_jobs';
 const TTL_MS = 6 * 60 * 60 * 1000;
@@ -102,13 +101,11 @@ export async function trackSubmitted(tabId: number, info: JobInfo, armed: boolea
   const app = await upsert(merged, 'submitted');
   await setTabJob(tabId, null); // so a reload of the confirmation page does not record twice
 
-  if (await getSession()) {
-    chrome.notifications.create(`lf-${app.id}`, {
-      type: 'basic',
-      iconUrl: chrome.runtime.getURL('icons/128.png'),
-      title: 'Application tracked',
-      message: `${app.jobTitle} at ${app.company}`,
-    });
-  }
+  chrome.notifications.create(`lf-${app.id}`, {
+    type: 'basic',
+    iconUrl: chrome.runtime.getURL('icons/128.png'),
+    title: 'Application tracked',
+    message: `${app.jobTitle} at ${app.company}`,
+  });
   return app;
 }

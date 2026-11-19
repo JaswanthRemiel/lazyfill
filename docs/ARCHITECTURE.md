@@ -8,36 +8,36 @@ see the [README](../README.md).
 1. [Overview](#overview)
 2. [Runtime pieces](#runtime-pieces)
 3. [Messaging](#messaging)
-4. [Authentication](#authentication)
-5. [Storage and the offline queue](#storage-and-the-offline-queue)
-6. [The autofill pipeline](#the-autofill-pipeline)
-7. [Saved answers](#saved-answers)
-8. [Application tracking](#application-tracking)
-9. [AI features](#ai-features)
-10. [The web tracker](#the-web-tracker)
-11. [Build outputs](#build-outputs)
-12. [Security model](#security-model)
-13. [Extending lazyfill](#extending-lazyfill)
+4. [Storage](#storage)
+5. [The autofill pipeline](#the-autofill-pipeline)
+6. [Saved answers](#saved-answers)
+7. [Application tracking](#application-tracking)
+8. [AI features](#ai-features)
+9. [Build outputs](#build-outputs)
+10. [Security model](#security-model)
+11. [Extending lazyfill](#extending-lazyfill)
 
 ## Overview
 
-lazyfill has three runtime pieces and one cloud backend:
+lazyfill has three runtime pieces and no backend. There is no account and no lazyfill server; everything is stored in
+the browser's extension storage.
 
 - A **content script** that runs in every page and every frame. It decides whether the page is a job application,
   shows the panel, fills fields, learns answers and shows the answer card.
-- A **service worker** that owns everything with side effects: talking to Firebase, the offline write queue, the
-  application tracker and the AI calls. Pages never call Firebase or an AI provider directly.
+- A **service worker** that owns everything with side effects: reading and writing storage, the application tracker,
+  backups and the AI calls. Pages never call an AI provider directly.
 - **Extension pages**: the panel (an iframe injected into job pages), the dashboard (a tab) and a welcome page. They
   are React apps that talk to the service worker.
-- A **Firebase project** for accounts (Authentication) and data (Cloud Firestore), reached over REST from the
-  extension and through the SDK from the web tracker.
+
+The only network traffic the extension makes on its own is to the AI provider you configure, and only when you use an
+AI feature.
 
 Design rules that explain most of the code:
 
-1. **Local first.** Reads that autofill needs come from `chrome.storage.local`, never from the network.
-2. **One place for secrets and network.** The service worker is the only code that holds the session token or the AI
-   key and the only code that calls out.
-3. **Fail soft.** A site handler that throws must not break the general pass. A failed save is queued and retried.
+1. **Local only.** All data lives in `chrome.storage.local`, so autofill never waits on the network.
+2. **One place for secrets and network.** The service worker is the only code that uses the AI key and the only code
+   that calls out.
+3. **Fail soft.** A site handler that throws must not break the general pass.
 4. **Never surprise the user.** Nothing is submitted, nothing the user typed is overwritten, and imported data is
    reviewed before it is added.
 
@@ -47,16 +47,13 @@ Design rules that explain most of the code:
 
 | File | Responsibility |
 |---|---|
-| `index.ts` | Routes messages, registers the context menu, handles the toolbar click, schedules the queue alarm. |
-| `firebase/auth.ts` | Email and password sign-in, sign-up with verification, password reset, token refresh, re-authentication, account deletion. REST against the Identity Toolkit and Secure Token APIs. |
-| `firebase/firestore.ts` | Firestore REST client: get, set, delete, list, and value encoding and decoding. |
-| `firebase/queue.ts` | Persistent write queue with retry. |
-| `data.ts` | Profiles, applications, resumes and reports, each cached locally and synced through the queue. |
-| `learned.ts` | Saved answers: cache, merge with the cloud copy, usage counts. |
+| `index.ts` | Routes messages, registers the context menu, handles the toolbar click, opens the welcome page on install. |
+| `data.ts` | Profiles, the active profile, applications and resumes, read from and written to `chrome.storage.local`. |
+| `learned.ts` | Saved answers: read, save, edit, delete, usage counts. Read-modify-write calls are serialised. |
+| `backup.ts` | Export backup, restore from backup (with validation) and delete all data. |
 | `tracker.ts` | Remembers which job each tab is on and records filled and submitted applications. |
 | `ai.ts` | Gemini and OpenAI calls, model fallback, resume extraction. |
 | `generate.ts` | "Generate with lazyfill": prompt building, sensitive-question refusal, answer-bank lookup. |
-| `account.ts` | Permanent deletion of a user's data and account. |
 
 ### Content script (`src/content`)
 
@@ -72,8 +69,9 @@ Design rules that explain most of the code:
 
 ### Extension pages
 
-- `src/panel`: the 360 by 467 panel. Routes: home, profiles, settings, report, login. It receives platform detection
-  from the host through `postMessage` and also asks the tabs API, because the tabs API can see forms inside iframes.
+- `src/panel`: the 360 by 467 panel. Routes: home, profiles, settings. The flag button opens a new GitHub issue in a
+  tab (`NEW_ISSUE_URL` in `src/shared/tracker.ts`). It receives platform detection from the host through `postMessage`
+  and also asks the tabs API, because the tabs API can see forms inside iframes.
 - `src/dashboard`: applications, profiles, profile editor, saved answers, settings, and the resume review dialog.
 - `src/welcome`: the page opened on first install.
 - `src/ui`: the design tokens (`theme.css`), the small component kit (`kit.tsx`), icons come from lucide.
@@ -91,7 +89,8 @@ send({ action: 'listApplications' })  // returns { success, data?, error? }
 
 The union of messages is in [`src/shared/messages.ts`](../src/shared/messages.ts) and the router is the `handle`
 function in [`src/background/index.ts`](../src/background/index.ts). Every reply has the same envelope, so UI code
-never needs to catch.
+never needs to catch. Messages cover profiles, applications, resumes, saved answers, the tracker, the AI features and
+backups (`exportBackup`, `importBackup`, `deleteAllData`). None of them involve a login or a session.
 
 Other channels:
 
@@ -99,64 +98,51 @@ Other channels:
 |---|---|---|
 | `chrome.tabs.sendMessage` with `frameId` | panel to content script | Run Autofill in each frame, ask each frame for its detection result. |
 | `window.postMessage` | panel and top page | `panelReady`, `panelVisible`, `closePanel`, `detectInfo`. Only the panel's own frame is accepted. |
-| `chrome.storage.onChanged` | any page | Keeps open pages in sync when the session, applications or cache change. |
+| `chrome.storage.onChanged` | any page | Keeps open pages in sync when profiles, applications or the theme change. |
 | Context menu click | service worker to every frame | `startSelection`. Only the frame that owns the selection answers. |
 
-## Authentication
+## Storage
 
-Accounts use Firebase Authentication with email and password. The extension calls the REST API directly, so it needs
-no SDK.
-
-The project's `apiKey` and `projectId` are read from storage on every call (`getFirebaseConfig` in `background/firebase/config.ts`), so pasting a config in Settings takes effect without a rebuild.
-
-```
-sign up   accounts:signUp  ->  accounts:sendOobCode (VERIFY_EMAIL)  ->  no session yet
-sign in   accounts:signInWithPassword  ->  accounts:lookup (emailVerified?)
-              verified:   store session {uid, email, idToken, refreshToken, expiresAt}
-              unverified: store nothing, show the verify screen
-refresh   securetoken.googleapis.com/v1/token, one minute before expiry, deduplicated
-```
-
-Details worth knowing:
-
-- Nothing is stored until the address is verified, and the Firestore rules also require `email_verified`.
-- The session lives in `chrome.storage.local` under `lf_session`. Only the service worker reads it.
-- Wrong password and unknown email produce the same message. Password reset always reports success.
-- Re-authentication for account deletion signs in again with the password to get a fresh token, then checks the user
-  id has not changed.
-- The web tracker uses the Firebase SDK against the same project, so the same account works in both places.
-
-## Storage and the offline queue
+Everything lazyfill keeps is in the browser's extension storage. There is no cloud copy. The key names are historical
+(some say "cache"), and they are kept so existing installs and backups still load.
 
 ### Local keys (`chrome.storage.local`)
 
 | Key | Contents |
 |---|---|
-| `lf_session` | The signed-in session. |
-| `lf_firebase_config` | The Firebase web config pasted in Settings. Read by the service worker for every Firebase call. Changing the project wipes the session and project data. |
-| `lf_profile_cache` | All profiles, for offline autofill. |
+| `lf_profile_cache` | All profiles. |
 | `lf_active_profile_id` | The profile the panel uses. |
-| `lf_applications_cache` | The tracker list, for offline viewing. |
+| `lf_applications_cache` | The tracked applications. |
 | `lf_learned_fields` | Saved answers by profile and platform. |
-| `lf_pending_writes`, `lf_failed_writes` | The write queue and writes that gave up. |
-| `lf_ai_settings` | Provider, key and model names. Never leaves the browser except in provider calls. |
-| `lf_prompt_template` | The edited answer prompt. |
-| `lf_resume_<profileId>` | A resume file cached locally. |
+| `lf_resume_<profileId>` | The resume file attached to a profile, as base64 with its name and type. |
+| `lf_prompt_template` | The edited answer prompt. Empty means the built-in one. |
+| `lf_ai_settings` | Provider, key and model names. Never leaves the browser except in provider calls, and never in a backup. |
 
-Session storage (`chrome.storage.session`) holds `lf_tab_jobs`, the job each tab is on. Sync storage holds the theme
-and the "skip result screens" preference.
+The typed keys are listed in `src/shared/storage.ts` (`getItem` and `setItem`). Session storage
+(`chrome.storage.session`) holds `lf_tab_jobs`, the job each tab is on. Sync storage holds the theme (`lf_theme`) and
+the "skip result screens" preference.
 
-### How a write works
+`chrome.storage` has no transactions, so `learned.ts` serialises its read-modify-write calls. The extension has the
+`unlimitedStorage` permission, so resume files are not limited by the default storage quota.
 
-1. The caller updates the local cache first, so the UI and autofill see the change immediately.
-2. It calls `enqueue({ op: 'set' | 'delete', path, data })`.
-3. The queue is serialised, because `chrome.storage` has no transactions. A newer write to the same path replaces an
-   older pending one.
-4. The queue flushes at once and again on a one minute alarm. Network errors, rate limits, server errors and expired
-   auth are retried, up to 8 attempts. A write that keeps failing moves to `lf_failed_writes`.
+### Backups (`backup.ts`)
 
-Reads of cloud data (listing profiles or applications) refresh the cache when the network works and fall back to the
-cache when it does not.
+Dashboard **Settings, 3 · Your data** sends three messages:
+
+- `exportBackup` returns every `lf_*` key in `chrome.storage.local` except `lf_ai_settings`, wrapped as:
+
+  ```json
+  { "format": "lazyfill-backup", "version": 1, "exportedAt": "2026-01-01T00:00:00.000Z", "data": { "lf_profile_cache": [] } }
+  ```
+
+  The dashboard downloads it as `lazyfill-backup-<date>.json`.
+- `importBackup` parses the text with `parseBackup`, which checks the format name, refuses a newer version, requires a
+  `data` object, drops keys that are not `lf_*` and drops `lf_ai_settings`, and checks that the profile and application
+  lists are arrays. Only then does it remove the existing `lf_*` keys (except the AI settings) and write the backup's.
+- `deleteAllData` clears local, session and sync storage, including the AI key.
+
+A new storage key that starts with `lf_` is included in backups automatically. A new secret must be added to
+`SECRET_KEYS` in `backup.ts`.
 
 ## The autofill pipeline
 
@@ -218,8 +204,8 @@ the label, field type, option text and index, so selects and radios can be repla
 Rules in `engine/learn.ts`: password, ID, card, date of birth and similar labels are never saved, consent boxes are
 excluded, and long text answers are replayed only on the same host. Answers are scoped to a profile and a platform id.
 
-`learned.ts` stores them in `lf_learned_fields` and in Firestore `learned/<profileId>` as one document. On read it
-pulls the cloud copy, merges by newest `lastUsed` for each label, and pushes the merged result back.
+`learned.ts` stores them in `lf_learned_fields`, grouped by profile and then platform, with a first-seen date, a
+last-used date and a usage count for each.
 
 ## Application tracking
 
@@ -232,7 +218,7 @@ from the page title, the Open Graph tags and the URL for known platforms. `track
   minutes), which keeps the check cheap and avoids false positives. When it fires, the status becomes `submitted` and a
   notification is shown.
 - The application id is a hash of the job URL (with tracking parameters and an `/apply` suffix removed), so the filled
-  and submitted records are one document. Statuses you set by hand are never overwritten.
+  and submitted records are one entry. Statuses you set by hand are never overwritten.
 
 ## AI features
 
@@ -269,30 +255,11 @@ reduced by `profileForPrompt` (no contact details). The reply is cleaned (code f
 dashes. The content script finds the answer box with `answerBox.ts`: the first text area or input that follows the
 selected text, widening one ancestor at a time and preferring a textarea.
 
-## The web tracker
-
-`web/` is a separate Vite build (`vite.web.config.ts`) deployed to GitHub Pages. It reuses the dashboard's
-`ApplicationsPage` unchanged. The dashboard page imports `send` and `onApplicationsChanged` from
-`src/shared/messages`; the web build aliases that module to `web/src/messages.ts`, which implements the same calls with
-the Firebase SDK against `users/<uid>/applications`. The static files in `web/public` (demo form, privacy policy,
-terms) are copied to the site root.
-
-The tracker is self-hosted: each person publishes their own copy and it only ever talks to their own Firebase
-project. The site gets its config from `localStorage` (or a build-time default), and the extension can hand it over in
-a link, `<site>/#setup=<base64url json>` (`trackerLink` and `configFromHash` in `src/shared/tracker.ts`). The site
-reads the fragment before the Firebase SDK starts, stores the config, and clears the fragment from the address bar.
-The extension keeps the person's site address in `lf_tracker_url` and uses it for the Open web tracker button and for
-the footer links to the privacy policy and terms.
-
-Because the extension writes with REST and the site with the SDK, both use plain Firestore value types and the same
-field names, so documents written by one are read by the other.
-
 ## Build outputs
 
 | Command | Output | Notes |
 |---|---|---|
 | `npm run build` | `dist/` | Panel, dashboard and welcome pages, `background.js` (an ES module service worker), then `content.js` and `content.css` from `vite.content.config.ts` as a single IIFE. |
-| `npm run build:web` | `dist-web/` | The tracker site, with relative asset paths so it works under any Pages path. |
 | `vite build --config vite.dev.config.ts` | `dist-dev/` | Harness pages with a mocked `chrome.*` API (`dev/mockChrome.ts`), for screenshots and visual checks. |
 
 The extension manifest is `public/manifest.json`. It exposes only `panel.html` to web pages, with a per-install URL,
@@ -300,12 +267,16 @@ so sites cannot detect or embed other parts of the extension.
 
 ## Security model
 
-- **Data isolation** is enforced by the Firestore rules, not by the client. A user can read and write only
-  `users/<their uid>/<collection>`, only for the collections lazyfill uses, and only with a verified email.
-- **The Firebase web config** is not in the code. It is pasted by the user and stored in the browser (or, optionally, baked in from `VITE_FIREBASE_*` build variables, which are not committed). It is an identifier, not a secret. Treat the rules as the security boundary and consider
-  restricting the API key to the three APIs in use.
-- **Secrets** (session, AI key) are readable only by extension pages and the service worker. Content scripts cannot
-  read `chrome.storage.local` data they were not sent, and pages cannot read content script memory.
+- **No server, no session.** There is no account, login or token. Data never leaves the browser except what an AI
+  feature sends to the provider the user configured.
+- **The AI key is the only secret.** It is stored in `lf_ai_settings`, read only by the service worker, sent only to the
+  provider's API host, and never written to a backup. Content scripts cannot read `chrome.storage.local` data they were
+  not sent, and pages cannot read content script memory.
+- **Backups are personal data.** An exported backup holds profiles, resumes, applications and saved answers in plain
+  JSON. Restoring validates the file and accepts only `lf_*` keys, never the AI settings.
+- **Host permissions** are limited to the known applicant tracking systems and the two AI API hosts
+  (`generativelanguage.googleapis.com`, `api.openai.com`). The content script still runs on every site except
+  LinkedIn, because application forms live on employers' own domains.
 - **Untrusted page input**: the content script only accepts `postMessage` from its own panel frame, treats page text as
   data, and builds its overlay UI inside shadow roots so page CSS and scripts cannot reach it.
 - **No remote code.** Everything, including the PDF worker, is bundled. The extension has no custom content security
@@ -344,7 +315,7 @@ so sites cannot detect or embed other parts of the extension.
 
 1. Add a variant to `Message` in `src/shared/messages.ts`.
 2. Handle it in the `handle` switch in `src/background/index.ts`.
-3. Call `send({ action: '...' })` from the page. If the web tracker needs it, implement it in `web/src/messages.ts` too.
+3. Call `send({ action: '...' })` from the page.
 
 ### Change the design
 

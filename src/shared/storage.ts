@@ -1,14 +1,9 @@
 import type { LearnedStore } from './learned';
-import type { AiSettings, Application, FirebaseConfig, PendingWrite, Profile, Session } from './types';
+import type { AiSettings, Application, Profile } from './types';
 
 interface Schema {
-  lf_session: Session;
-  lf_firebase_config: FirebaseConfig;
-  lf_tracker_url: string;
   lf_profile_cache: Profile[];
   lf_active_profile_id: string;
-  lf_pending_writes: PendingWrite[];
-  lf_failed_writes: PendingWrite[];
   lf_ai_settings: AiSettings;
   lf_applications_cache: Application[];
   lf_learned_fields: LearnedStore;

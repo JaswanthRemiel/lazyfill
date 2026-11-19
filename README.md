@@ -1,8 +1,8 @@
 # lazyfill
 
 lazyfill is a Chrome extension that fills in job applications from a profile you keep, records every application you
-fill or submit, and can draft answers to open-ended questions with an AI service you connect. A small companion web
-page shows the same application tracker from any browser.
+fill or submit, and can draft answers to open-ended questions with an AI service you connect. There is no account and
+no server: everything is stored in your browser.
 
 https://github.com/user-attachments/assets/d09eaaa6-1520-4cf9-91a2-63c58d4114ae
 
@@ -28,7 +28,7 @@ The detailed setup guide is [docs/SETUP.md](docs/SETUP.md). More detail on inter
   Repeating sections ("Add another job") are filled one entry at a time, including month and year pickers, "currently
   work here" boxes and degree wording. lazyfill never submits a form and never ticks consent or terms boxes.
 - **Application tracker.** Every application you fill or submit is saved with its company, role, link, status and
-  notes. Search, filter, export to CSV or JSON, import JSON, and open the same list on the web tracker.
+  notes. Search, filter, export to CSV or JSON, and import JSON.
 - **Resume import.** Build a profile from a PDF or an image of your resume. The pages are rendered to images and read
   together with the exact text and the real addresses behind links, the answer is checked against the file, and you
   review everything before anything is added.
@@ -39,81 +39,65 @@ The detailed setup guide is [docs/SETUP.md](docs/SETUP.md). More detail on inter
 - **Answer bank.** Keep answers to questions you see often and choose whether each is typed as written, written by AI,
   or written by AI using your notes as a guide.
 - **Profiles as JSON.** Download a template, fill it in and import it, or export profiles for backup.
-- **Works offline.** Profiles are cached in the browser, so autofill never waits on the network. Changes are queued
-  and synced when the connection returns.
-- **Dark and light themes.** The panel, dashboard and web tracker share one design system.
+- **Local only.** Everything is stored in your browser, so autofill never waits on the network and nothing is uploaded.
+  Export one backup file to move to another computer.
+- **Dark and light themes.** The panel and dashboard share one design system.
 
 ## How it is built
 
 ```
-Chrome extension (Manifest V3)                                  Cloud
+Chrome extension (Manifest V3)
 +---------------------------------------------+
 | content script (every page)                 |
-|   detects application forms, shows panel    |         +-----------------------------+
-|   fills fields, learns answers, answer card |         | Firebase project            |
-+---------------------+-----------------------+         |   Authentication (password) |
-                      | messages                        |   Cloud Firestore           |
-+---------------------v-----------------------+  HTTPS  +--------------^--------------+
-| service worker                              +----------------------->|
-|   Firebase REST client, offline write queue |                        |
-|   application tracker, AI client            |         +--------------+--------------+
-+---------------------+-----------------------+         | AI provider you choose      |
-                      | messages                        |   Gemini or OpenAI          |
-+---------------------v-----------------------+         +-----------------------------+
+|   detects application forms, shows panel    |
+|   fills fields, learns answers, answer card |
++---------------------+-----------------------+
+                      | messages
++---------------------v-----------------------+  HTTPS, only   +-----------------------------+
+| service worker                              |  when you use  | AI provider you choose      |
+|   local storage, application tracker,       +--------------->|   Gemini or OpenAI          |
+|   backups, AI client                        |  an AI feature +-----------------------------+
++---------------------+-----------------------+
+                      | messages
++---------------------v-----------------------+
 | panel (iframe) and dashboard (tab)          |
-|   React 18, Tailwind CSS 4                  |         +-----------------------------+
-+---------------------------------------------+         | Web tracker (GitHub Pages)  |
-                                                        |   same Firestore data,      |
-                                                        |   Firebase SDK, from web/   |
-                                                        +-----------------------------+
+|   React 18, Tailwind CSS 4                  |
++---------------------------------------------+
 ```
 
-Stack: TypeScript, React 18, Vite 5, Tailwind CSS 4, lucide icons, pdf.js, Firebase (REST calls in the extension, the
-SDK on the web page), Vitest with jsdom.
+Stack: TypeScript, React 18, Vite 5, Tailwind CSS 4, lucide icons, pdf.js, Vitest with jsdom.
 
 ## Requirements
 
 - Node.js 20 or newer, and npm.
 - A Chromium based browser, version 114 or newer (Chrome, Edge, Brave).
-- A Firebase project (the free Spark plan is enough). See [Setup](#setup).
 - Optional: a Gemini or OpenAI API key for resume import and answer generation.
-- Optional: a GitHub repository of your own with Pages enabled, to host your own web tracker. See [docs/SETUP.md](docs/SETUP.md).
 
 ## Setup
 
-lazyfill is software you run yourself. There is no lazyfill server: you create your own Firebase project for accounts
-and storage and paste its config into the extension, so nothing about your project is stored in the code.
+lazyfill is not in the Chrome Web Store yet, so for now you build it and load it yourself. There is no account to
+create and nothing to configure.
 
-**The full, step-by-step guide, with a check after every step and fixes for common problems, is in
-[docs/SETUP.md](docs/SETUP.md).** The short version:
+**The full guide, with a check after every step and fixes for common problems, is in [docs/SETUP.md](docs/SETUP.md).**
+The short version:
 
 1. **Build.** `git clone https://github.com/JaswanthRemiel/lazyfill.git`, then `cd lazyfill`, `npm install` and
    `npm run build`. The extension is written to `dist/`.
 2. **Load it.** Open `chrome://extensions`, turn on **Developer mode**, choose **Load unpacked** and select `dist`.
-3. **Create a Firebase project** in the [Firebase console](https://console.firebase.google.com): add a **Web app** and
-   copy its config block, enable **Authentication, Email/Password**, create a **Firestore** database in production mode,
-   and publish the rules from [`firestore.rules`](firestore.rules).
-4. **Connect.** In the extension open the dashboard, go to **Settings**, paste the config into **Firebase project** and
-   press **Save and connect**. Then create your account in the **Account** card and verify your email.
-5. **Optional.** Add a Gemini or OpenAI key under **AI key** for resume import and answer drafting. Host your own
-   web tracker from your fork of the repository (see the guide, section 10).
+3. **Make a profile.** Open the dashboard, go to **Profiles** and press **New profile**.
+4. **Optional.** Add a Gemini or OpenAI key under **Settings, AI key** for resume import and answer drafting.
 
 Detailed walkthroughs in the guide:
 
 | Topic | Section |
 |---|---|
-| Requirements and what you are setting up | [1](docs/SETUP.md#1-what-you-are-setting-up) and [2](docs/SETUP.md#2-before-you-start) |
+| What you get and requirements | [1](docs/SETUP.md#1-what-you-get) and [2](docs/SETUP.md#2-before-you-start) |
 | Building and loading the extension | [3](docs/SETUP.md#3-get-the-code-and-build-it) and [4](docs/SETUP.md#4-load-the-extension-in-your-browser) |
-| Firebase project, rules and API key | [5](docs/SETUP.md#5-create-your-firebase-project) |
-| Connecting the extension and creating your account | [6](docs/SETUP.md#6-connect-the-extension-to-your-project) and [7](docs/SETUP.md#7-create-your-account) |
-| AI provider | [8](docs/SETUP.md#8-optional-connect-an-ai-provider) |
-| First autofill and the demo form | [9](docs/SETUP.md#9-your-first-autofill) |
-| Your own web tracker on GitHub Pages | [10](docs/SETUP.md#10-optional-host-your-own-web-tracker) |
-| Updating, backing up, removing everything | [11](docs/SETUP.md#11-everyday-maintenance) |
-| Problems and fixes | [12](docs/SETUP.md#12-setup-problems-and-fixes) |
-
-The Firebase web config is an identifier, not a secret: access control comes from the Firestore rules, so do not skip
-publishing them. Restrict the API key by API (never by website) as described in the guide.
+| First profile and the demo form | [5](docs/SETUP.md#5-make-a-profile) and [6](docs/SETUP.md#6-try-it-on-the-demo-form) |
+| AI provider | [7](docs/SETUP.md#7-optional-connect-an-ai-provider) |
+| Backup and restore | [8](docs/SETUP.md#8-back-up-and-restore-your-data) |
+| Updating and removing | [9](docs/SETUP.md#9-everyday-maintenance) |
+| Problems and fixes | [10](docs/SETUP.md#10-setup-problems-and-fixes) |
 
 ## Using lazyfill
 
@@ -137,8 +121,7 @@ Fill a profile in by hand, import it from a resume, or import it from JSON.
    ticked by default. A value that would replace something you typed is unticked. Press **Add to profile** to apply
    only what is ticked.
 
-The file is also attached to the profile so it can be uploaded to applications that ask for one. Attached files are
-limited to about 700 KB.
+The file is also attached to the profile so it can be uploaded to applications that ask for one.
 
 ![Review screen for an imported resume](docs/screenshots/4-review-before-anything-is-added.png)
 
@@ -227,55 +210,60 @@ Rejected, Ghosted and Withdrawn.
 In the dashboard under **Applications** you can search, filter by status, edit notes, add an application by hand,
 **Export CSV**, **Export JSON** and **Import JSON**.
 
-The web tracker shows the same list. Open your own tracker (Settings, Web tracker) and sign in with the same email and password. Changes made in
-either place appear in the other.
+### Settings and your data
 
-### Settings and account
-
-- Panel settings: dark mode, skipping the result animations, and links to the tracker, account settings and privacy
-  policy.
-- Dashboard **Settings**: account, AI provider and models, and the answer prompt.
-- **Report** in the panel sends a description and an optional screenshot to the `reports` collection of your own
-  account.
-- **Delete my account** (dashboard Settings) asks for your password, deletes everything stored for the account in
-  Firestore, deletes the account itself, and clears the extension's data in the browser. It cannot be undone, so export
-  first if you want a copy.
+- Panel settings: dark mode, skipping the result animations, and links to the tracker, the dashboard settings and the
+  privacy policy.
+- Dashboard **Settings** has three cards:
+  1. **AI key**: provider, key and models. See [Generate with lazyfill](#generate-with-lazyfill).
+  2. **"Generate with lazyfill" prompt**: the editable answer prompt.
+  3. **Your data**: **Export backup** downloads one JSON file with your profiles, resumes, applications, saved answers
+     and prompt (not your AI key). **Restore from backup** replaces this browser's lazyfill data with a backup and keeps
+     your AI key. **Delete all data** removes everything lazyfill stores in this browser, including the AI key. It
+     cannot be undone.
+- The flag button in the panel opens a new issue on the project's GitHub page in a tab. Nothing is sent by the
+  extension itself.
 
 ## Configuration reference
 
-### Configuration in `src/shared/config.ts` and `.env.local`
+### Constants in `src/shared/tracker.ts` and `src/shared/config.ts`
 
 | Name | Purpose |
 |---|---|
-| Firebase config | Not a constant. Pasted in Settings and stored in the browser (`lf_firebase_config` in the extension, `localStorage` on the web tracker), or optionally baked in at build time from the `VITE_FIREBASE_*` variables in `.env.local`. |
-| Tracker address | Not a constant either. Pasted in Settings, Web tracker and stored in the browser (`lf_tracker_url`). The privacy and terms links in the footers point to that site, or to this README until one is set. |
-| `REPO_URL` | The project's home on GitHub, in `src/shared/tracker.ts`. Used for the fallback legal links. |
+| `REPO_URL` | The project's home on GitHub. |
+| `SITE_URL` | The landing site, which also hosts the privacy policy and terms (`LEGAL`). |
+| `NEW_ISSUE_URL` | Where the panel's report button goes: a new GitHub issue. |
 | `NOT_AFFILIATED` | The disclaimer shown in footers. |
 
-### Firestore data model
+There are no build-time variables and no `.env` file.
 
-All data is under `users/<uid>/`, where `<uid>` is the Firebase user id.
+### Local storage keys
 
-| Collection | Document id | Contents |
-|---|---|---|
-| `profiles` | profile id | Name, timestamps and the profile data. |
-| `applications` | hash of job URL, company and title | One tracked application. |
-| `resumes` | profile id | The resume file as base64 with its name and type. |
-| `learned` | profile id | Saved answers, grouped by platform. |
-| `reports` | generated id | A report you sent: description and optional screenshot. |
-| `settings` | `connection-test`, `prompt` | A connection check and your answer prompt. |
+Everything is in `chrome.storage.local` in your browser. The names are historical.
+
+| Key | Contents |
+|---|---|
+| `lf_profile_cache` | All profiles. |
+| `lf_active_profile_id` | The profile the panel uses. |
+| `lf_applications_cache` | Tracked applications. |
+| `lf_learned_fields` | Saved answers, by profile and platform. |
+| `lf_resume_<profileId>` | The resume attached to a profile. |
+| `lf_prompt_template` | Your edited answer prompt. |
+| `lf_ai_settings` | AI provider, key and models. Never included in a backup. |
+
+The backup format is described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#storage).
 
 ### Extension permissions
 
 | Permission | Used for |
 |---|---|
-| `storage`, `unlimitedStorage` | Profile cache, settings, saved answers, offline queue and resume files. |
-| `alarms` | Retrying queued saves once a minute. |
+| `storage`, `unlimitedStorage` | Profiles, applications, settings, saved answers and resume files, all in the browser. |
 | `activeTab`, `scripting` | Making the toolbar button work on pages that were open before installation. |
 | `tabs`, `webNavigation` | Finding the active tab and the frames of a page, since application forms are often in iframes. |
 | `notifications` | Telling you an application was recorded as submitted. |
 | `contextMenus` | The "Generate with lazyfill" menu item. |
-| Host access to Google API hosts and the two AI hosts | Sign-in, saving data, and the optional AI features. |
+| Host access to known applicant tracking systems (Greenhouse, Workday, Lever, Ashby, BambooHR, SmartRecruiters, iCIMS, Jobvite, ADP, Rippling, Comeet) | Working on those platforms' application pages. The exact list is in `public/manifest.json`. |
+| Host access to `generativelanguage.googleapis.com` and `api.openai.com` | The optional AI features. |
 | Content script on all sites except linkedin.com | Recognising an application form on any employer's site. |
 
 The content script reads form fields and labels locally. For pages it does not recognise as job applications it sends
@@ -283,18 +271,19 @@ nothing anywhere.
 
 ## Data and privacy
 
-- Profiles, applications, saved answers, resumes and reports are stored in the configured Firebase project under your
-  user id, and cached in the browser. Firestore rules let only your verified account read or write them. Whoever owns
-  the Firebase project can see stored data in the Firebase console, so run your own project if that matters to you.
-- Your AI key is stored only in the browser's extension storage.
+- Profiles, resumes, applications, saved answers and settings are stored only in your browser's extension storage.
+  There is no account and no lazyfill server, and nothing is uploaded to the project or anyone else.
+- Your AI key is stored only in the browser's extension storage and is never included in a backup.
 - When you use an AI feature, your browser sends the request straight to the provider. For resume import that is
   images of the pages with their text and links. For answer generation it is the selected question, a summary of your
   profile without contact details, and the job title, company and description. Free tiers of some providers, Gemini
   among them, may use submitted content to improve their products. Read your provider's terms.
 - There are no analytics, trackers or advertisements.
-- You can export your data from the dashboard and delete all of it from **Settings, Delete my account**.
+- Removing the extension or clearing browser data deletes your data. Use **Settings, Your data, Export backup** to keep
+  a copy, and **Delete all data** to remove everything at once.
 
-The full text is in [web/public/privacy.html](web/public/privacy.html) and [web/public/terms.html](web/public/terms.html). They are templates for the software as shipped: lazyfill has no central service, so whoever runs a copy is the one responsible for the data in it.
+The full text is in the [privacy policy](https://lazyfill.remiel.in/privacy) and the
+[terms](https://lazyfill.remiel.in/terms).
 
 ## Development
 
@@ -304,7 +293,6 @@ The full text is in [web/public/privacy.html](web/public/privacy.html) and [web/
 |---|---|
 | `npm install` | Installs dependencies. |
 | `npm run build` | Builds the extension into `dist/`. |
-| `npm run build:web` | Builds the web tracker into `dist-web/`. |
 | `npm test` | Runs the unit tests (Vitest with jsdom). |
 | `npm run typecheck` | Runs the TypeScript compiler without emitting. |
 | `npm run dev` | Rebuilds the pages and service worker on change. Rerun `npm run build` after changing the content script. |
@@ -316,43 +304,41 @@ The full text is in [web/public/privacy.html](web/public/privacy.html) and [web/
 ### Project layout
 
 ```
-src/background   service worker: Firebase REST client, offline queue, tracker, AI client, account deletion
+src/background   service worker: local storage, tracker, backups, AI client
 src/content      page script: detection, fill engine, site handlers, panel host, answer card
 src/panel        the 360 by 467 panel shown on job pages
 src/dashboard    applications, profiles, saved answers, settings, resume review
 src/resume       PDF reading in the browser: text, links and page images
 src/shared       types, profile model, JSON import and export, prompts, resume verification
 src/ui           design tokens, component kit, shared pieces
-web              the tracker site published to GitHub Pages
-site             the landing page (Next.js), deployed to Vercel (standalone, own package.json)
-dev              mock chrome API and harness pages for visual checks
+site             the landing page, privacy policy and terms (Next.js), deployed to Vercel (standalone, own package.json)
+dev              demo application form, mock chrome API and harness pages for visual checks
 scripts          packaging, notices, screenshots
 tests/fixtures   a fictional two column resume PDF used by the PDF reader tests
 docs             architecture notes and screenshots
-.github          CI, Pages deployment and release workflows
+.github          CI and release workflows
 ```
 
 ### Tests
 
 Tests sit next to the code as `*.test.ts`. They cover the fill engine against HTML fixtures that imitate real sites,
 the site handlers for Workday, Avature, Jobvite, SmartRecruiters and others, profile JSON import, the answer prompt,
-resume verification and review, the PDF reader on a real PDF, account deletion, and the Firebase auth calls with a
-mocked network. Site handlers are tested against mock markup, not live sites, so a handler can still fail when a site
+resume verification and review, the PDF reader on a real PDF, saved answers, and backup export and restore. Site handlers are tested against mock markup, not live sites, so a handler can still fail when a site
 changes.
 
 ### Continuous integration
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `ci.yml` | Pull requests and pushes to `main` | Typecheck, tests, both builds, and the landing page build. |
-| `pages.yml` | Pushes to `main` that touch the site or source | Builds `web/` and deploys it to GitHub Pages. |
-| `release.yml` | Pushing a tag such as `v1.0.0` | Runs the tests and `npm run package`, then attaches the zip to a GitHub release. Uses the same repository variables as `pages.yml`. |
+| `ci.yml` | Pull requests and pushes to `main` | Typecheck, tests and the extension build, plus the landing page build. |
+| `release.yml` | Pushing a tag such as `v1.0.0` | Runs the tests and `npm run package`, then attaches the zip to a GitHub release. |
 
 Keep `version` in `package.json` and `public/manifest.json` equal. `npm run package` refuses to run if they differ.
 
 ### Landing page
 
-The project website lives in [`site/`](site/), a standalone Next.js app with its own `package.json`. It is
+The project website, including the privacy policy (`/privacy`) and terms (`/terms`) pages, lives in [`site/`](site/),
+a standalone Next.js app with its own `package.json`. It is
 deployed by Vercel's Git integration whenever something under `site/` changes on `main` (pull requests get preview
 addresses). Setup and local development are described in [site/README.md](site/README.md).
 
@@ -365,27 +351,22 @@ site handler, and adding a message between the pages and the service worker.
 
 | Symptom | Likely cause and fix |
 |---|---|
-| The panel says "Connect your Firebase project" | No config has been pasted yet. Open the dashboard, go to Settings, and paste the web app config from the Firebase console. |
-| "Firebase says this API key is not valid" | The key was copied wrongly or belongs to another project. Copy the whole block again from Project settings, Your apps, Web app. |
-| "This API key is restricted in a way that blocks the extension" | In Google Cloud, Credentials, the key's **Application restrictions** must be **None**. Restrict it by **API** only (Identity Toolkit, Token Service, Cloud Firestore); a website restriction blocks the extension. |
 | The panel does not open on an application | The page may not look like an application to the detector. Click the toolbar icon to open it manually. Pages in a background tab are ignored until they are shown. |
 | "Best effort" instead of a platform name | The site is not a known applicant tracking system. The general engine fills what it understands by label, name and ARIA attributes. |
 | Autofill reports few fields | The fields may already have values, since they are never overwritten, or the form loads later. Press Autofill again once the form is visible. |
-| Nothing happens on a site | Use **Report** in the panel with a description. Site handlers depend on the site's current markup. |
-| `Missing or insufficient permissions` | The Firestore rules are not published, or the account's email is not verified. Publish `firestore.rules` and verify the email. |
-| `Email and password sign-in is not enabled` | Enable Email/Password under Authentication, Sign-in method. |
-| The verification or reset email does not arrive | Check spam. Make sure the project's authorized domains include the host of your web tracker. |
+| Nothing happens on a site | Use the flag button in the panel to open a GitHub issue with a description. Site handlers depend on the site's current markup. |
+| Profiles and applications are gone | The extension was removed and loaded again, or browser data was cleared. Restore your last file from **Export backup**. |
 | `API key not valid` or a quota error on import | Check the key and model in Settings. Free tier keys often cannot use the stronger import model, in which case lazyfill falls back to the everyday one. |
 | The right-click item is missing | Select some text first, since the item only appears on a selection. Reload the extension after an update. |
 | Import with AI returns very little | Scanned or image-only resumes depend on the model reading the image, and the text check cannot help. Try a text PDF or a clearer image. |
-| The web tracker is blank after sign-in | Open the browser console. The usual causes are unpublished Firestore rules or an unauthorized domain. |
 | Content script changes have no effect | Run `npm run build`, not only `npm run dev`, and reload the extension. |
 
 ## Known limits
 
 - Site handlers were written and tested against mock pages, not every live site. Expect rough edges.
 - Resume import reads at most 4 pages. The stronger import model costs more per resume than the everyday model.
-- Attached resumes are limited to about 700 KB so each fits in one Firestore document.
+- Data is stored per browser and is not synced. To use lazyfill on another computer or browser, use **Export backup**
+  there and **Restore from backup** here, or the other way round. Removing the extension deletes its data.
 - Answer generation inserts into text inputs and textareas only.
 - The extension works on the sites you visit. Some websites restrict automated tools in their own terms, and you are
   responsible for the sites you use it on.

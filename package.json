@@ -8,7 +8,6 @@
     "build": "vite build && vite build --config vite.content.config.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "build:web": "vite build --config vite.web.config.ts",
     "notices": "node scripts/notices.mjs",
     "package": "node scripts/package.mjs",
     "screenshots": "node scripts/screenshots.mjs"
@@ -16,7 +15,6 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
     "clsx": "^2.1.1",
-    "firebase": "^13.1.0",
     "lucide-react": "^1.61.0",
     "pdfjs-dist": "^6.4.299",
     "react": "^18.3.1",

@@ -277,12 +277,6 @@ Source: https://github.com/mozilla/pdf.js
 "Licensor" shall mean the copyright owner or entity authorized by
 
 ------------------------------------------------------------------------
-firebase 13.1.0
-License: Apache-2.0
-Source: https://github.com/firebase/firebase-js-sdk
-
-
-------------------------------------------------------------------------
 tailwindcss 4.3.3
 License: MIT
 Source: https://github.com/tailwindlabs/tailwindcss

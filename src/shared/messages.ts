@@ -8,18 +8,9 @@ import type { LearnedEntry } from './learned';
 export type Message =
   | { action: 'ping' }
   | { action: 'togglePanel' }
-  | { action: 'testConnection' }
-  | { action: 'signIn'; email: string; password: string }
-  | { action: 'signUp'; email: string; password: string }
-  | { action: 'resendVerification'; email: string; password: string }
-  | { action: 'sendPasswordReset'; email: string }
-  | { action: 'signOut' }
-  | { action: 'deleteAccount'; password: string }
-  | { action: 'getSession' }
-  | { action: 'getFirebaseSetup' }
-  | { action: 'saveFirebaseConfig'; text: string }
-  | { action: 'clearFirebaseConfig' }
-  | { action: 'getTrackerLink' }
+  | { action: 'exportBackup' }
+  | { action: 'importBackup'; text: string }
+  | { action: 'deleteAllData' }
   | { action: 'listProfiles' }
   | { action: 'saveProfile'; profile: Profile }
   | { action: 'deleteProfile'; id: string }
@@ -36,7 +27,6 @@ export type Message =
   | { action: 'generateAnswer'; question: string; job: { title: string; company: string; description: string } }
   | { action: 'getPromptTemplate' }
   | { action: 'savePromptTemplate'; template: string }
-  | { action: 'submitReport'; description: string; screenshot?: { fileName: string; mimeType: string; base64: string } }
   | { action: 'getLearned'; profileId: string; scope: string }
   | { action: 'saveLearned'; profileId: string; scope: string; label: string; entry: Omit<LearnedEntry, 'firstSeen' | 'lastUsed' | 'timesUsed' | 'source'> }
   | { action: 'learnedUsed'; profileId: string; scope: string; labels: string[] }
@@ -46,8 +36,7 @@ export type Message =
   | { action: 'listLearned' }
   | { action: 'jobSeen'; info: JobInfo }
   | { action: 'trackFilled'; info: JobInfo; filledCount: number }
-  | { action: 'trackSubmitted'; info: JobInfo; armed: boolean }
-  | { action: 'flushQueue' };
+  | { action: 'trackSubmitted'; info: JobInfo; armed: boolean };
 
 export type MessageResponse<T = unknown> = { success: boolean; data?: T; error?: string };
 

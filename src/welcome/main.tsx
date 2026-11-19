@@ -7,9 +7,8 @@ import { Wordmark } from '../ui/kit';
 import { useTheme } from '../ui/theme';
 
 const steps = [
-  ['Connect your Firebase project', 'lazyfill keeps your data in a Firebase project that you own. Paste its web app config in Settings. The setup guide walks you through creating one.', 'settings'],
-  ['Create your account', 'Sign up with your email and a password, verify the address, and your profiles and applications are saved to your account.', 'settings'],
-  ['Create a profile', 'Upload your resume and let your AI key fill it in, or type it by hand.', 'profiles/new'],
+  ['Create a profile', 'Upload your resume and let your AI key fill it in, or type it by hand. It is stored only in this browser.', 'profiles/new'],
+  ['Add an AI key (optional)', 'A Gemini or OpenAI key lets lazyfill read your resume and draft answers. It stays in this browser.', 'settings'],
   ['Apply anywhere', 'Open a job application. lazyfill appears on its own. Press Autofill, review, and submit.', 'applications'],
 ];
 
@@ -20,7 +19,7 @@ function Welcome() {
       <Wordmark />
       <div>
         <h1 className="text-[40px] leading-[1.05] font-semibold tracking-tight">Let’s get you set up.</h1>
-        <p className="mt-3 text-base text-muted-foreground">The first time takes around ten minutes, mostly creating your Firebase project. You only do it once.</p>
+        <p className="mt-3 text-base text-muted-foreground">No account needed. Everything stays in your browser.</p>
       </div>
       <ol className="grid gap-3">
         {steps.map(([title, body, to], i) => (
@@ -36,7 +35,7 @@ function Welcome() {
           </li>
         ))}
       </ol>
-      <p className="text-[13px] text-muted-foreground">Click the toolbar icon on any page to open the panel manually. Need help? Read the <a className="font-medium text-foreground underline underline-offset-2" href={`${REPO_URL}/blob/main/docs/SETUP.md`} target="_blank" rel="noreferrer">setup guide</a>.</p>
+      <p className="text-[13px] text-muted-foreground">Click the toolbar icon on any page to open the panel manually. Need help? Read the <a className="font-medium text-foreground underline underline-offset-2" href={REPO_URL} target="_blank" rel="noreferrer">README</a>.</p>
     </main>
   );
 }
